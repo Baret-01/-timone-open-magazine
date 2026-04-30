@@ -32,6 +32,21 @@ const DEFAULT_STATUSES = [
   { name: 'Approvato',      color: '#10B981' },
   { name: 'Consegnato',     color: '#047857' },
 ];
+const COLOR_PALETTE = [
+  // Neutri
+  { hex: '#FFFFFF', light: true }, { hex: '#F3F4F6', light: true }, { hex: '#E5E7EB', light: true },
+  { hex: '#9CA3AF', light: true }, { hex: '#6B7280' }, { hex: '#374151' }, { hex: '#1a1a2e' },
+  // Caldi
+  { hex: '#FEE2E2', light: true }, { hex: '#FCA5A5', light: true }, { hex: '#EF4444' },
+  { hex: '#DC2626' }, { hex: '#F97316' }, { hex: '#FBBF24', light: true }, { hex: '#F59E0B' },
+  // Verdi / Teal
+  { hex: '#D1FAE5', light: true }, { hex: '#34D399', light: true }, { hex: '#10B981' },
+  { hex: '#059669' }, { hex: '#047857' }, { hex: '#06B6D4' }, { hex: '#0891B2' },
+  // Blu / Viola / Rosa
+  { hex: '#DBEAFE', light: true }, { hex: '#60A5FA', light: true }, { hex: '#3B82F6' },
+  { hex: '#4F46E5' }, { hex: '#8B5CF6' }, { hex: '#EC4899' }, { hex: '#F472B6', light: true },
+];
+
 const DEFAULT_MATERIALI = [
   { name: 'Mancanti',  color: '#EF4444' },
   { name: 'In arrivo', color: '#F59E0B' },
@@ -661,9 +676,21 @@ function renderImpostazioni(container) {
 }
 
 function openTypeEditor(kind, id) {
-  const list  = kind==='type' ? state.contentTypes : kind==='status' ? state.statuses : state.materialiStatuses;
-  const item  = id ? list.find(x => x.id===id) : null;
+  const list   = kind==='type' ? state.contentTypes : kind==='status' ? state.statuses : state.materialiStatuses;
+  const item   = id ? list.find(x => x.id===id) : null;
   const labels = { type:'tipo', status:'stato lavorazione', materiali:'stato materiali' };
+  const curColor = (item?.color || '#4F46E5').toLowerCase();
+
+  const rowLabels = ['Neutri','Caldi','Verdi & Teal','Blu & Viola'];
+  let swatchHtml = '';
+  COLOR_PALETTE.forEach((c, i) => {
+    if (i % 7 === 0) swatchHtml += `<div class="color-palette-label">${rowLabels[i/7]}</div>`;
+    const active = c.hex.toLowerCase() === curColor ? 'active' : '';
+    const tc = c.light ? '#374151' : '#ffffff';
+    swatchHtml += `<div class="color-swatch ${active}" style="background:${c.hex};color:${tc}"
+      title="${c.hex}" onclick="pickPaletteColor('${c.hex}')"></div>`;
+  });
+
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">
       <span>${item?'✏️ Modifica':'➕ Nuovo'} ${labels[kind]}</span>
@@ -673,8 +700,16 @@ function openTypeEditor(kind, id) {
       <div class="form-group"><label>Nome *</label>
         <input type="text" id="ft-name" value="${escHtml(item?.name||'')}">
       </div>
-      <div class="form-group"><label>Colore</label>
-        <input type="color" id="ft-color" value="${item?.color||'#4F46E5'}">
+      <div class="form-group">
+        <label>Colore</label>
+        <div class="color-palette">${swatchHtml}</div>
+        <div class="color-custom-row">
+          <label>Personalizzato</label>
+          <input type="color" id="ft-color" value="${curColor}"
+            oninput="syncColorPicker(this)">
+          <span class="color-preview-chip" id="ft-color-preview"
+            style="background:${curColor};color:${isLight(curColor)?'#1a1a2e':'#fff'}">${curColor}</span>
+        </div>
       </div>
     </div>
     <div class="modal-actions">
@@ -685,6 +720,28 @@ function openTypeEditor(kind, id) {
     </div>`;
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.getElementById('ft-name').focus();
+}
+
+function pickPaletteColor(hex) {
+  const input   = document.getElementById('ft-color');
+  const preview = document.getElementById('ft-color-preview');
+  if (!input) return;
+  input.value = hex;
+  preview.style.background = hex;
+  preview.style.color = isLight(hex) ? '#1a1a2e' : '#fff';
+  preview.textContent = hex;
+  document.querySelectorAll('.color-swatch').forEach(s => {
+    s.classList.toggle('active', s.title.toLowerCase() === hex.toLowerCase());
+  });
+}
+
+function syncColorPicker(input) {
+  const hex     = input.value;
+  const preview = document.getElementById('ft-color-preview');
+  preview.style.background = hex;
+  preview.style.color = isLight(hex) ? '#1a1a2e' : '#fff';
+  preview.textContent = hex;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
 }
 
 async function saveTypeOrStatus(kind, id) {
