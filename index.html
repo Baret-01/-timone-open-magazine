@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPEN Magazine — Timone Editoriale</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <div id="config-screen" class="hidden">
+      <div class="config-box">
+        <div class="config-logo">📰</div>
+        <h2>Configura la connessione</h2>
+        <p>Inserisci le credenziali Supabase per connettere l'app al database condiviso.</p>
+        <div id="config-error" class="error-msg hidden"></div>
+        <label>URL Progetto Supabase
+          <input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co">
+        </label>
+        <label>Chiave Anonima (anon key)
+          <input type="text" id="cfg-key" placeholder="eyJhbGci...">
+        </label>
+        <button id="cfg-save" class="btn-primary">Connetti</button>
+        <p class="config-help">Trovi questi valori in Supabase → Project Settings → API</p>
+      </div>
+    </div>
+
+    <div id="main-app" class="hidden">
+      <header>
+        <div class="header-title">
+          <span class="header-icon">📰</span>
+          <span id="magazine-title">OPEN Magazine 01-2026</span>
+        </div>
+        <nav>
+          <button class="nav-btn active" data-view="lista">📋 Lista Sezioni</button>
+          <button class="nav-btn" data-view="timone">🗺 Timone</button>
+          <button class="nav-btn" data-view="impostazioni">⚙️ Tipi & Stati</button>
+        </nav>
+        <div class="header-actions">
+          <button id="btn-export-excel" class="btn-secondary" title="Esporta Excel">📊 Excel</button>
+          <button id="btn-export-pdf" class="btn-secondary" title="Stampa / Esporta PDF">🖨 PDF</button>
+        </div>
+      </header>
+
+      <main id="main-content"></main>
+    </div>
+
+    <div id="modal-overlay" class="hidden">
+      <div id="modal-box">
+        <div id="modal-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
