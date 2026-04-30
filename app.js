@@ -2,13 +2,15 @@
 //  OPEN Magazine — Timone Editoriale
 // ============================================================
 
-const CONFIG_KEY   = 'open_timone_config';
+const CONFIG_KEY    = 'open_timone_config';
 const MAGAZINE_NAME = 'OPEN Magazine 01-2026';
-const MATERIALI_OPTIONS = ['Mancanti', 'In arrivo', 'Ricevuti', 'OK'];
 
 let db = null;
 let realtimeChannel = null;
-let state = { sections: [], contentTypes: [], statuses: [], currentView: 'lista' };
+let state = {
+  sections: [], contentTypes: [], statuses: [], materialiStatuses: [],
+  currentView: 'lista',
+};
 
 const DEFAULT_TYPES = [
   { name: 'COVER',        color: '#1a1a2e' },
@@ -29,6 +31,12 @@ const DEFAULT_STATUSES = [
   { name: 'Impaginato',     color: '#34D399' },
   { name: 'Approvato',      color: '#10B981' },
   { name: 'Consegnato',     color: '#047857' },
+];
+const DEFAULT_MATERIALI = [
+  { name: 'Mancanti',  color: '#EF4444' },
+  { name: 'In arrivo', color: '#F59E0B' },
+  { name: 'Ricevuti',  color: '#3B82F6' },
+  { name: 'OK',        color: '#10B981' },
 ];
 
 // ============================================================
@@ -95,7 +103,7 @@ function wireNav() {
 function wireHeaderButtons() {
   document.getElementById('btn-import-excel').onclick = importExcel;
   document.getElementById('btn-export-excel').onclick = exportExcel;
-  document.getElementById('btn-export-pdf').onclick = () => window.print();
+  document.getElementById('btn-export-pdf').onclick   = () => window.print();
 }
 
 // ============================================================
@@ -103,19 +111,28 @@ function wireHeaderButtons() {
 // ============================================================
 
 async function loadAll() {
-  const [secRes, typRes, stRes] = await Promise.all([
+  const [secRes, typRes, stRes, matRes] = await Promise.all([
     db.from('sections').select('*').order('position'),
     db.from('content_types').select('*').order('name'),
     db.from('statuses').select('*').order('name'),
+    db.from('materiali_statuses').select('*').order('name'),
   ]);
-  if (typRes.data && typRes.data.length === 0) {
+
+  // Seed defaults if empty
+  if (typRes.data && typRes.data.length === 0)
     await db.from('content_types').insert(DEFAULT_TYPES);
+  if (stRes.data && stRes.data.length === 0)
     await db.from('statuses').insert(DEFAULT_STATUSES);
+  if (matRes.data && matRes.data.length === 0)
+    await db.from('materiali_statuses').insert(DEFAULT_MATERIALI);
+
+  if ((typRes.data?.length === 0) || (stRes.data?.length === 0) || (matRes.data?.length === 0))
     return loadAll();
-  }
-  state.sections     = secRes.data || [];
-  state.contentTypes = typRes.data || [];
-  state.statuses     = stRes.data  || [];
+
+  state.sections          = secRes.data || [];
+  state.contentTypes      = typRes.data || [];
+  state.statuses          = stRes.data  || [];
+  state.materialiStatuses = matRes.data || [];
 }
 
 function subscribeRealtime() {
@@ -133,22 +150,18 @@ function subscribeRealtime() {
 function calcPages(sections) {
   let page = 2;
   return sections.map(s => {
-    const start = page;
-    const end   = page + s.pages_count - 1;
+    const start = page, end = page + s.pages_count - 1;
     page = end + 1;
     return { ...s, start_page: start, end_page: end };
   });
 }
-
 function totalPages(sections) {
   if (!sections.length) return 1;
   const wp = calcPages(sections);
   return wp[wp.length - 1].end_page;
 }
-
 function nextMultiple(n, m) {
-  if (n % m === 0) return n;
-  return n + (m - (n % m));
+  return n % m === 0 ? n : n + (m - (n % m));
 }
 
 // ============================================================
@@ -157,10 +170,10 @@ function nextMultiple(n, m) {
 
 function renderCurrentView() {
   const el = document.getElementById('main-content');
-  if      (state.currentView === 'lista')         renderLista(el);
-  else if (state.currentView === 'dashboard')     renderDashboard(el);
-  else if (state.currentView === 'timone')        renderTimone(el);
-  else if (state.currentView === 'impostazioni')  renderImpostazioni(el);
+  if      (state.currentView === 'lista')        renderLista(el);
+  else if (state.currentView === 'dashboard')    renderDashboard(el);
+  else if (state.currentView === 'timone')       renderTimone(el);
+  else if (state.currentView === 'impostazioni') renderImpostazioni(el);
 }
 
 // ============================================================
@@ -175,34 +188,35 @@ function renderLista(container) {
   const m4  = nextMultiple(tot, 4);
 
   let badge = '';
-  if (tot % 16 === 0)      badge = `<span class="pc-badge pc-green">✓ Multiplo di 16 — ottimale</span>`;
-  else if (tot % 8 === 0)  badge = `<span class="pc-badge pc-yellow">⚠ Multiplo di 8 — accettabile</span><span class="pc-info">+${m16-tot}p per ${m16} (×16)</span>`;
-  else if (tot % 4 === 0)  badge = `<span class="pc-badge pc-yellow">⚠ Multiplo di 4</span><span class="pc-info">+${m8-tot}p per ${m8} (×8) · +${m16-tot}p per ${m16} (×16)</span>`;
-  else                      badge = `<span class="pc-badge pc-red">✗ Non multiplo di 4</span><span class="pc-info">Prossimi: ${m4}p (×4) · ${m8}p (×8) · ${m16}p (×16)</span>`;
+  if (tot % 16 === 0)     badge = `<span class="pc-badge pc-green">✓ Multiplo di 16 — ottimale</span>`;
+  else if (tot % 8 === 0) badge = `<span class="pc-badge pc-yellow">⚠ Multiplo di 8</span><span class="pc-info">+${m16-tot}p per ${m16} (×16)</span>`;
+  else if (tot % 4 === 0) badge = `<span class="pc-badge pc-yellow">⚠ Multiplo di 4</span><span class="pc-info">+${m8-tot}p per ${m8} (×8) · +${m16-tot}p per ${m16} (×16)</span>`;
+  else                     badge = `<span class="pc-badge pc-red">✗ Non multiplo di 4</span><span class="pc-info">Prossimi: ${m4}p (×4) · ${m8}p (×8) · ${m16}p (×16)</span>`;
 
   let rows = '';
   if (!wp.length) {
-    rows = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">📄</div><p>Nessuna sezione. Inizia aggiungendo la prima!</p></div></td></tr>`;
+    rows = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📄</div><p>Nessuna sezione. Clicca "Aggiungi" o usa "Importa" per caricare dal tuo Excel.</p></div></td></tr>`;
   } else {
     rows = wp.map(s => {
-      const tc = getTypeColor(s.content_type);
-      const sc = getStatusColor(s.status);
-      const matClass = { 'Mancanti':'mat-mancanti','In arrivo':'mat-inarrivo','Ricevuti':'mat-ricevuti','OK':'mat-ok' }[s.materiali] || 'mat-mancanti';
-      const urlHtml  = s.url ? `<a class="url-link" href="${escHtml(s.url)}" target="_blank" rel="noopener">🔗</a>` : '';
+      const tc  = getTypeColor(s.content_type);
+      const sc  = getStatusColor(s.status);
+      const mc  = getMatColor(s.materiali);
+      const mTC = isLight(mc) ? '#1a1a2e' : '#fff';
+      const urlH = s.url ? `<a class="url-link" href="${escHtml(s.url)}" target="_blank" rel="noopener">🔗</a>` : '';
       return `<tr data-id="${s.id}">
         <td><span class="drag-handle">⠿</span></td>
         <td><span class="type-badge" style="background:${tc}">${escHtml(s.content_type)}</span></td>
-        <td style="max-width:250px">
+        <td style="max-width:240px">
           <strong>${escHtml(s.title)}</strong>
           ${s.notes ? `<br><small style="color:#6B7280">${escHtml(s.notes)}</small>` : ''}
         </td>
         <td><span class="status-dot" style="color:${sc}">${escHtml(s.status)}</span></td>
-        <td><span class="mat-badge ${matClass}">${escHtml(s.materiali || 'Mancanti')}</span></td>
-        <td>${urlHtml}</td>
+        <td><span class="mat-badge" style="background:${mc};color:${mTC}">${escHtml(s.materiali||'Mancanti')}</span></td>
+        <td>${urlH}</td>
         <td class="pages-count">${s.pages_count}p</td>
         <td class="page-range">${s.start_page}–${s.end_page}</td>
         <td class="row-actions">
-          <button class="btn-icon" onclick="openEditor('${s.id}')" title="Modifica">✏️</button>
+          <button class="btn-icon" onclick="openEditor('${s.id}')">✏️</button>
           <button class="btn-icon" onclick="confirmDelete('${s.id}','${escHtml(s.title).replace(/'/g,"\\'")}')">🗑</button>
         </td>
       </tr>`;
@@ -220,10 +234,10 @@ function renderLista(container) {
     </div>
     <table class="section-table">
       <thead><tr>
-        <th style="width:32px"></th>
-        <th>Tipo</th><th>Titolo</th><th>Stato</th><th>Materiali</th>
-        <th style="width:32px">URL</th><th>Pag.</th><th>Posizione</th>
-        <th style="width:72px"></th>
+        <th style="width:30px"></th>
+        <th>Tipo</th><th>Titolo</th><th>Stato</th>
+        <th>Materiali</th><th style="width:30px">URL</th>
+        <th>Pag.</th><th>Posizione</th><th style="width:68px"></th>
       </tr></thead>
       <tbody id="sections-tbody">${rows}</tbody>
     </table>`;
@@ -259,8 +273,8 @@ function openEditor(id) {
   const statOpts = state.statuses.map(t =>
     `<option value="${escHtml(t.name)}" ${s?.status === t.name ? 'selected':''}>${escHtml(t.name)}</option>`
   ).join('');
-  const matOpts  = MATERIALI_OPTIONS.map(m =>
-    `<option value="${m}" ${(s?.materiali||'Mancanti') === m ? 'selected':''}>${m}</option>`
+  const matOpts = state.materialiStatuses.map(m =>
+    `<option value="${escHtml(m.name)}" ${(s?.materiali||'Mancanti') === m.name ? 'selected':''}>${escHtml(m.name)}</option>`
   ).join('');
 
   document.getElementById('modal-content').innerHTML = `
@@ -285,7 +299,7 @@ function openEditor(id) {
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label>Stato</label>
+          <label>Stato lavorazione</label>
           <select id="f-status">${statOpts}</select>
         </div>
         <div class="form-group">
@@ -322,7 +336,7 @@ async function saveSection(id) {
   const url      = document.getElementById('f-url').value.trim() || null;
   const notes    = document.getElementById('f-notes').value.trim() || null;
 
-  if (!title) { alert('Inserisci il titolo.'); return; }
+  if (!title)          { alert('Inserisci il titolo.'); return; }
   if (!pages || pages < 1) { alert('Numero pagine non valido.'); return; }
 
   const payload = { title, content_type: type, pages_count: pages, status, materiali, url, notes, color: getTypeColor(type) };
@@ -334,13 +348,12 @@ async function saveSection(id) {
     await db.from('sections').insert({ ...payload, position: maxPos });
   }
   closeModal();
-  await loadAll();
-  renderCurrentView();
+  await loadAll(); renderCurrentView();
 }
 
 function confirmDelete(id, title) {
   if (!confirm(`Eliminare "${title}"?`)) return;
-  db.from('sections').delete().eq('id', id).then(() => { loadAll().then(renderCurrentView); });
+  db.from('sections').delete().eq('id', id).then(() => loadAll().then(renderCurrentView));
 }
 
 function closeModal() {
@@ -356,33 +369,28 @@ function renderDashboard(container) {
   const wp  = calcPages(state.sections);
   const tot = totalPages(state.sections);
   const n   = state.sections.length;
-
   const m16 = nextMultiple(tot, 16);
   const m8  = nextMultiple(tot, 8);
   const m4  = nextMultiple(tot, 4);
+  const pct = v => tot > 1 ? Math.round(v / (tot - 1) * 100) : 0;
 
-  // Pages per type
   const byType = {};
   state.contentTypes.forEach(t => { byType[t.name] = 0; });
-  wp.forEach(s => { byType[s.content_type] = (byType[s.content_type] || 0) + s.pages_count; });
+  wp.forEach(s => { byType[s.content_type] = (byType[s.content_type]||0) + s.pages_count; });
 
-  // Pages per status
   const byStatus = {};
   state.statuses.forEach(s => { byStatus[s.name] = 0; });
-  wp.forEach(s => { byStatus[s.status] = (byStatus[s.status] || 0) + s.pages_count; });
+  wp.forEach(s => { byStatus[s.status] = (byStatus[s.status]||0) + s.pages_count; });
 
-  // Pages per materiali
-  const byMat = { 'Mancanti': 0, 'In arrivo': 0, 'Ricevuti': 0, 'OK': 0 };
+  const byMat = {};
+  state.materialiStatuses.forEach(m => { byMat[m.name] = 0; });
   wp.forEach(s => { byMat[s.materiali||'Mancanti'] = (byMat[s.materiali||'Mancanti']||0) + s.pages_count; });
-
-  const pct = (v) => tot > 1 ? Math.round(v / (tot - 1) * 100) : 0;
 
   const typeRows = state.contentTypes
     .filter(t => (byType[t.name]||0) > 0)
     .sort((a,b) => (byType[b.name]||0) - (byType[a.name]||0))
     .map(t => {
-      const v = byType[t.name] || 0;
-      const p = pct(v);
+      const v = byType[t.name]||0, p = pct(v);
       return `<div class="type-bar-row">
         <div class="type-bar-color" style="background:${t.color}"></div>
         <div class="type-bar-name">${escHtml(t.name)}</div>
@@ -392,27 +400,25 @@ function renderDashboard(container) {
       </div>`;
     }).join('');
 
-  const statusRows = state.statuses
-    .map(s => {
-      const v  = byStatus[s.name] || 0;
-      const p  = pct(v);
-      const ns = wp.filter(x => x.status === s.name).length;
-      return `<div class="dash-stat-row">
-        <span style="display:flex;align-items:center;gap:.4rem">
-          <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span>
-          ${escHtml(s.name)}
-        </span>
-        <span><strong>${v}p</strong> <span class="dash-stat-pct">(${ns} art. · ${p}%)</span></span>
-      </div>`;
-    }).join('');
-
-  const matClass = { 'Mancanti':'mat-mancanti','In arrivo':'mat-inarrivo','Ricevuti':'mat-ricevuti','OK':'mat-ok' };
-  const matRows = MATERIALI_OPTIONS.map(m => {
-    const v  = byMat[m] || 0;
-    const ns = wp.filter(s => (s.materiali||'Mancanti') === m).length;
+  const statusRows = state.statuses.map(s => {
+    const v = byStatus[s.name]||0, p = pct(v);
+    const ns = wp.filter(x => x.status === s.name).length;
     return `<div class="dash-stat-row">
-      <span><span class="mat-badge ${matClass[m]}">${m}</span></span>
-      <span><strong>${v}p</strong> <span class="dash-stat-pct">(${ns} art.)</span></span>
+      <span style="display:flex;align-items:center;gap:.4rem">
+        <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block"></span>
+        ${escHtml(s.name)}
+      </span>
+      <span><strong>${v}p</strong> <span class="dash-stat-pct">${ns} art. · ${p}%</span></span>
+    </div>`;
+  }).join('');
+
+  const matRows = state.materialiStatuses.map(m => {
+    const v  = byMat[m.name]||0;
+    const ns = wp.filter(s => (s.materiali||'Mancanti') === m.name).length;
+    const tc = isLight(m.color) ? '#1a1a2e' : '#fff';
+    return `<div class="dash-stat-row">
+      <span><span class="mat-badge" style="background:${m.color};color:${tc}">${escHtml(m.name)}</span></span>
+      <span><strong>${v}p</strong> <span class="dash-stat-pct">${ns} art.</span></span>
     </div>`;
   }).join('');
 
@@ -421,51 +427,44 @@ function renderDashboard(container) {
     return `<div class="segnatura-row">
       <div class="seg-light ${ok?'seg-green':'seg-red'}"></div>
       <div class="seg-label">Multiplo di ${mul}</div>
-      <div class="seg-note">${ok ? '✓ OK' : `+${diff}p per arrivare a ${target}`}</div>
+      <div class="seg-note">${ok ? '✓ OK' : `+${diff}p per ${target}`}</div>
     </div>`;
   };
 
-  const adv     = byType['ADV'] || 0;
-  const advPct  = pct(adv);
-  const red     = (byType['REDAZIONALE'] || 0) + (byType['CORPORATE'] || 0) + (byType['ATTUALITA'] || 0) + (byType['LIFESTYLE'] || 0) + (byType['RETAIL'] || 0);
-  const redPct  = pct(red);
+  const adv    = byType['ADV']||0;
+  const red    = ['REDAZIONALE','CORPORATE','ATTUALITA','LIFESTYLE','RETAIL']
+                   .reduce((acc,k) => acc + (byType[k]||0), 0);
 
   container.innerHTML = `
     <h2 style="margin-bottom:1.1rem">Dashboard — ${escHtml(MAGAZINE_NAME)}</h2>
     <div class="dashboard-grid">
-
       <div class="dash-card">
         <h3>Totali</h3>
         <div style="display:flex;gap:1.5rem;align-items:flex-end;margin-bottom:1rem">
           <div><div class="totale-big">${tot}</div><div class="totale-label">pagine totali</div></div>
           <div><div class="totale-big">${n}</div><div class="totale-label">sezioni</div></div>
         </div>
-        <div class="dash-stat-row"><span>ADV</span><span><strong>${adv}p</strong><span class="dash-stat-pct">${advPct}%</span></span></div>
-        <div class="dash-stat-row"><span>Redazionale</span><span><strong>${red}p</strong><span class="dash-stat-pct">${redPct}%</span></span></div>
+        <div class="dash-stat-row"><span>ADV</span><span><strong>${adv}p</strong><span class="dash-stat-pct">${pct(adv)}%</span></span></div>
+        <div class="dash-stat-row"><span>Redazionale</span><span><strong>${red}p</strong><span class="dash-stat-pct">${pct(red)}%</span></span></div>
       </div>
-
       <div class="dash-card">
         <h3>Segnatura di stampa</h3>
-        ${mkSeg(16, m16, m16 - tot)}
-        ${mkSeg(8, m8, m8 - tot)}
-        ${mkSeg(4, m4, m4 - tot)}
+        ${mkSeg(16, m16, m16-tot)}
+        ${mkSeg(8,  m8,  m8-tot)}
+        ${mkSeg(4,  m4,  m4-tot)}
       </div>
-
       <div class="dash-card">
         <h3>Pagine per tipo</h3>
         ${typeRows || '<p style="color:#9CA3AF;font-size:.85rem">Nessuna sezione.</p>'}
       </div>
-
       <div class="dash-card">
         <h3>Avanzamento lavorazione</h3>
         ${statusRows}
       </div>
-
       <div class="dash-card">
         <h3>Stato materiali</h3>
         ${matRows}
       </div>
-
     </div>`;
 }
 
@@ -478,78 +477,55 @@ function renderTimone(container) {
   const tot = totalPages(state.sections);
   const displayTotal = nextMultiple(Math.max(tot, 4), 4);
 
-  // Build page → section map
   const pageMap = {};
-  wp.forEach(s => {
-    for (let p = s.start_page; p <= s.end_page; p++) pageMap[p] = s;
-  });
+  wp.forEach(s => { for (let p = s.start_page; p <= s.end_page; p++) pageMap[p] = s; });
 
-  // Detect cover (first section, COVER type, page 1) and IV copertina (last section, COVER type)
   const firstSec = wp[0];
   const lastSec  = wp[wp.length - 1];
   const hasIV    = lastSec && lastSec.content_type?.toUpperCase() === 'COVER';
+  const ivPage   = hasIV ? lastSec.end_page : -1;
 
-  // Cover cell (page 1)
-  const coverColor     = firstSec ? (firstSec.color || getTypeColor(firstSec.content_type)) : '#1a1a2e';
-  const coverTextColor = isLight(coverColor) ? '#1a1a2e' : '#fff';
-  const coverCell = `
-    <div class="cover-single">
-      <div class="cover-page" style="background:${coverColor};color:${coverTextColor}">
-        <div class="page-num">p. 1</div>
-        <div class="page-type-lbl">${escHtml(firstSec?.content_type || 'COVER')}</div>
-        <div class="page-title-lbl">${escHtml(firstSec?.title || 'COVER')}</div>
-      </div>
-    </div>`;
+  const coverColor = firstSec ? (firstSec.color || getTypeColor(firstSec.content_type)) : '#1a1a2e';
+  const coverTc    = isLight(coverColor) ? '#1a1a2e' : '#fff';
+  const coverCell  = `<div class="cover-single">
+    <div class="cover-page" style="background:${coverColor};color:${coverTc}">
+      <div class="page-num">p. 1</div>
+      <div class="page-type-lbl">${escHtml(firstSec?.content_type||'COVER')}</div>
+      <div class="page-title-lbl">${escHtml(firstSec?.title||'COVER')}</div>
+    </div></div>`;
 
-  // IV copertina cell
   let ivCell = '';
   if (hasIV) {
-    const ivColor     = lastSec.color || getTypeColor(lastSec.content_type);
-    const ivTextColor = isLight(ivColor) ? '#1a1a2e' : '#fff';
-    ivCell = `
-      <div class="cover-single">
-        <div class="cover-page" style="background:${ivColor};color:${ivTextColor}">
-          <div class="page-num">p. ${lastSec.end_page}</div>
-          <div class="page-type-lbl">${escHtml(lastSec.content_type)}</div>
-          <div class="page-title-lbl">${escHtml(lastSec.title)}</div>
-        </div>
-      </div>`;
+    const ic = lastSec.color || getTypeColor(lastSec.content_type);
+    const it = isLight(ic) ? '#1a1a2e' : '#fff';
+    ivCell = `<div class="cover-single">
+      <div class="cover-page" style="background:${ic};color:${it}">
+        <div class="page-num">p. ${lastSec.end_page}</div>
+        <div class="page-type-lbl">${escHtml(lastSec.content_type)}</div>
+        <div class="page-title-lbl">${escHtml(lastSec.title)}</div>
+      </div></div>`;
   }
 
-  // Build spread cells for pages 2 .. displayTotal (skip last page if IV copertina)
-  const ivPage  = hasIV ? lastSec.end_page : -1;
   const spreads = [];
-
   for (let p = 2; p <= displayTotal; p += 2) {
     const lp = p, rp = p + 1;
-    if (lp === ivPage || rp === ivPage) {
-      // Skip the IV copertina page in main grid
-      spreads.push(buildSpread(lp === ivPage ? null : pageMap[lp], lp,
-                               rp === ivPage ? null : pageMap[rp], rp));
-    } else {
-      spreads.push(buildSpread(pageMap[lp], lp, pageMap[rp], rp));
-    }
+    const lSec = lp === ivPage ? null : pageMap[lp];
+    const rSec = rp === ivPage ? null : pageMap[rp];
+    spreads.push(buildSpread(lSec, lp, rSec, rp));
   }
 
-  // Rows of 4 spreads
   let gridHtml = `<div class="timone-cover-row">${coverCell}</div>`;
   for (let i = 0; i < spreads.length; i += 4) {
     const chunk = spreads.slice(i, i + 4);
-    const fp    = 2 + i * 2;
-    const lp2   = fp + chunk.length * 2 - 1;
-    gridHtml += `
-      <div class="spread-row">
-        <div class="timone-row-label">pp. ${fp}–${lp2}</div>
-        ${chunk.join('')}
-      </div>`;
+    const fp = 2 + i * 2, lp2 = fp + chunk.length * 2 - 1;
+    gridHtml += `<div class="spread-row">
+      <div class="timone-row-label">pp. ${fp}–${lp2}</div>
+      ${chunk.join('')}
+    </div>`;
   }
+  if (hasIV) gridHtml += `<div class="timone-bottom-row">${ivCell}</div>`;
 
-  if (hasIV) {
-    gridHtml += `<div class="timone-bottom-row">${ivCell}</div>`;
-  }
-
-  // Legend
-  const usedTypes = [...new Set(wp.map(s => s.content_type))];
+  const usedTypes   = [...new Set(wp.map(s => s.content_type))];
   const legendItems = usedTypes.map(name => {
     const c = getTypeColor(name);
     return `<div class="legend-item"><div class="legend-color" style="background:${c}"></div>${escHtml(name)}</div>`;
@@ -569,27 +545,26 @@ function renderTimone(container) {
 function buildSpread(leftSec, lp, rightSec, rp) {
   if (!leftSec && !rightSec) {
     return `<div class="spread empty-spread">
-      <div class="page-half"><span class="page-empty-lbl">—</span></div>
+      <div class="page-half"></div>
       <div class="fold-line"></div>
-      <div class="page-half"><span class="page-empty-lbl">—</span></div>
+      <div class="page-half"></div>
     </div>`;
   }
-
-  const lc  = leftSec  ? (leftSec.color  || getTypeColor(leftSec.content_type))  : '#F3F4F6';
-  const rc  = rightSec ? (rightSec.color || getTypeColor(rightSec.content_type)) : '#F3F4F6';
-  const lt  = isLight(lc) ? '#1a1a2e' : '#fff';
-  const rt  = isLight(rc) ? '#1a1a2e' : '#fff';
-
-  const leftHtml  = `<div class="page-half" style="background:${lc};color:${lt}">
-    <div class="page-num">p. ${lp}</div>
-    ${leftSec  ? `<div class="page-type-lbl">${escHtml(leftSec.content_type)}</div><div class="page-title-lbl">${escHtml(leftSec.title)}</div>` : '<span class="page-empty-lbl">—</span>'}
+  const lc = leftSec  ? (leftSec.color  || getTypeColor(leftSec.content_type))  : '#F3F4F6';
+  const rc = rightSec ? (rightSec.color || getTypeColor(rightSec.content_type)) : '#F3F4F6';
+  const lt = isLight(lc) ? '#1a1a2e' : '#fff';
+  const rt = isLight(rc) ? '#1a1a2e' : '#fff';
+  return `<div class="spread">
+    <div class="page-half" style="background:${lc};color:${lt}">
+      <div class="page-num">p. ${lp}</div>
+      ${leftSec  ? `<div class="page-type-lbl">${escHtml(leftSec.content_type)}</div><div class="page-title-lbl">${escHtml(leftSec.title)}</div>` : ''}
+    </div>
+    <div class="fold-line"></div>
+    <div class="page-half" style="background:${rc};color:${rt}">
+      <div class="page-num">p. ${rp}</div>
+      ${rightSec ? `<div class="page-type-lbl">${escHtml(rightSec.content_type)}</div><div class="page-title-lbl">${escHtml(rightSec.title)}</div>` : ''}
+    </div>
   </div>`;
-  const rightHtml = `<div class="page-half" style="background:${rc};color:${rt}">
-    <div class="page-num">p. ${rp}</div>
-    ${rightSec ? `<div class="page-type-lbl">${escHtml(rightSec.content_type)}</div><div class="page-title-lbl">${escHtml(rightSec.title)}</div>` : '<span class="page-empty-lbl">—</span>'}
-  </div>`;
-
-  return `<div class="spread">${leftHtml}<div class="fold-line"></div>${rightHtml}</div>`;
 }
 
 // ============================================================
@@ -597,57 +572,53 @@ function buildSpread(leftSec, lp, rightSec, rp) {
 // ============================================================
 
 function renderImpostazioni(container) {
-  const typesList = state.contentTypes.map(t => `
+  const mkList = (items, kind) => items.map(t => `
     <div class="type-item">
       <div class="type-item-color" style="background:${t.color}"></div>
       <div class="type-item-name">${escHtml(t.name)}</div>
       <div class="type-item-actions">
-        <button class="btn-icon" onclick="openTypeEditor('type','${t.id}')">✏️</button>
-        <button class="btn-icon" onclick="deleteType('${t.id}','${escHtml(t.name).replace(/'/g,"\\'")}')">🗑</button>
+        <button class="btn-icon" onclick="openTypeEditor('${kind}','${t.id}')">✏️</button>
+        <button class="btn-icon" onclick="deleteEntry('${kind}','${t.id}','${escHtml(t.name).replace(/'/g,"\\'")}')">🗑</button>
       </div>
-    </div>`).join('');
-
-  const statusList = state.statuses.map(s => `
-    <div class="type-item">
-      <div class="type-item-color" style="background:${s.color}"></div>
-      <div class="type-item-name">${escHtml(s.name)}</div>
-      <div class="type-item-actions">
-        <button class="btn-icon" onclick="openTypeEditor('status','${s.id}')">✏️</button>
-        <button class="btn-icon" onclick="deleteStatus('${s.id}','${escHtml(s.name).replace(/'/g,"\\'")}')">🗑</button>
-      </div>
-    </div>`).join('');
+    </div>`).join('') || '<p style="color:#9CA3AF;font-size:.85rem">Nessuna voce.</p>';
 
   container.innerHTML = `
-    <h2 style="margin-bottom:1.1rem">Tipi di contenuto & Stati</h2>
-    <div class="settings-grid">
+    <h2 style="margin-bottom:1.1rem">Tipi, Stati & Materiali</h2>
+    <div class="settings-grid-3">
       <div class="settings-card">
         <h3>Tipi di contenuto
           <button class="btn-primary" style="font-size:.75rem;padding:.28rem .65rem" onclick="openTypeEditor('type',null)">+ Aggiungi</button>
         </h3>
-        <div class="type-list">${typesList || '<p style="color:#9CA3AF;font-size:.85rem">Nessun tipo.</p>'}</div>
+        <div class="type-list">${mkList(state.contentTypes,'type')}</div>
       </div>
       <div class="settings-card">
         <h3>Stati di lavorazione
           <button class="btn-primary" style="font-size:.75rem;padding:.28rem .65rem" onclick="openTypeEditor('status',null)">+ Aggiungi</button>
         </h3>
-        <div class="type-list">${statusList || '<p style="color:#9CA3AF;font-size:.85rem">Nessuno stato.</p>'}</div>
+        <div class="type-list">${mkList(state.statuses,'status')}</div>
+      </div>
+      <div class="settings-card">
+        <h3>Stato materiali
+          <button class="btn-primary" style="font-size:.75rem;padding:.28rem .65rem" onclick="openTypeEditor('materiali',null)">+ Aggiungi</button>
+        </h3>
+        <div class="type-list">${mkList(state.materialiStatuses,'materiali')}</div>
       </div>
     </div>`;
 }
 
 function openTypeEditor(kind, id) {
-  const list  = kind === 'type' ? state.contentTypes : state.statuses;
+  const list  = kind === 'type' ? state.contentTypes : kind === 'status' ? state.statuses : state.materialiStatuses;
   const item  = id ? list.find(x => x.id === id) : null;
-  const label = kind === 'type' ? 'tipo' : 'stato';
+  const labels = { type: 'tipo', status: 'stato', materiali: 'stato materiali' };
 
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">
-      <span>${item ? `✏️ Modifica ${label}` : `➕ Nuovo ${label}`}</span>
+      <span>${item ? '✏️ Modifica' : '➕ Nuovo'} ${labels[kind]}</span>
       <button class="btn-icon" onclick="closeModal()">✕</button>
     </div>
     <div class="form-grid">
       <div class="form-group"><label>Nome *</label>
-        <input type="text" id="ft-name" value="${escHtml(item?.name||'')}" placeholder="Es. INTERVISTA">
+        <input type="text" id="ft-name" value="${escHtml(item?.name||'')}">
       </div>
       <div class="form-group"><label>Colore</label>
         <input type="color" id="ft-color" value="${item?.color||'#4F46E5'}">
@@ -667,21 +638,17 @@ async function saveTypeOrStatus(kind, id) {
   const name  = document.getElementById('ft-name').value.trim();
   const color = document.getElementById('ft-color').value;
   if (!name) { alert('Inserisci un nome.'); return; }
-  const table = kind === 'type' ? 'content_types' : 'statuses';
+  const table = kind === 'type' ? 'content_types' : kind === 'status' ? 'statuses' : 'materiali_statuses';
   if (id) await db.from(table).update({ name, color }).eq('id', id);
   else    await db.from(table).insert({ name, color });
   closeModal();
   await loadAll(); renderCurrentView();
 }
 
-async function deleteType(id, name) {
-  if (!confirm(`Eliminare il tipo "${name}"?`)) return;
-  await db.from('content_types').delete().eq('id', id);
-  await loadAll(); renderCurrentView();
-}
-async function deleteStatus(id, name) {
-  if (!confirm(`Eliminare lo stato "${name}"?`)) return;
-  await db.from('statuses').delete().eq('id', id);
+async function deleteEntry(kind, id, name) {
+  if (!confirm(`Eliminare "${name}"?`)) return;
+  const table = kind === 'type' ? 'content_types' : kind === 'status' ? 'statuses' : 'materiali_statuses';
+  await db.from(table).delete().eq('id', id);
   await loadAll(); renderCurrentView();
 }
 
@@ -691,112 +658,93 @@ async function deleteStatus(id, name) {
 
 function importExcel() {
   const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.xlsx,.xls';
+  input.type = 'file'; input.accept = '.xlsx,.xls';
   input.onchange = async (e) => {
     const file = e.target.files[0];
-  if (!file) return;
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
         const data = new Uint8Array(ev.target.result);
         const wb   = XLSX.read(data, { type: 'array' });
         const ws   = wb.Sheets['LISTA'];
-        if (!ws) { alert('Foglio LISTA non trovato nel file.'); return; }
+        if (!ws) { alert('Foglio "LISTA" non trovato nel file.'); return; }
 
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-
-        // Find header row
         let hi = -1;
         for (let i = 0; i < rows.length; i++) {
           if (rows[i] && rows[i].includes('Titolo') && rows[i].includes('Stato')) { hi = i; break; }
         }
         if (hi === -1) { alert('Intestazione non trovata.'); return; }
 
-        const hdr = rows[hi];
-        const col = name => hdr.indexOf(name);
-        const iS  = col('Stato');
-        const iT  = col('Tipo');
-        const iTi = col('Titolo');
-        const iP  = col('N.Pagine');
-        const iM  = col('Materiali');
-        const iU  = col('URL');
-        const iN  = col('Note');
+        const hdr  = rows[hi];
+        const col  = name => hdr.indexOf(name);
+        const iS   = col('Stato'), iT = col('Tipo'), iTi = col('Titolo');
+        const iP   = col('N.Pagine'), iM = col('Materiali'), iU = col('URL'), iN = col('Note');
 
-        // Ensure content types exist for all imported types
-        const importedTypes = new Set();
-        for (let i = hi + 1; i < rows.length; i++) {
-          const r = rows[i];
-          if (r && r[iTi] && typeof r[iTi] === 'string' && r[iTi].trim()) {
-            importedTypes.add((r[iT] || 'REDAZIONALE').toString().trim().toUpperCase());
-          }
-        }
-        const existingTypeNames = new Set(state.contentTypes.map(t => t.name.toUpperCase()));
-        const newTypes = [...importedTypes].filter(t => !existingTypeNames.has(t));
-        if (newTypes.length) {
-          await db.from('content_types').insert(newTypes.map(name => ({ name, color: '#6B7280' })));
-        }
-
-        // Ensure statuses exist
-        const importedStats = new Set();
-        for (let i = hi + 1; i < rows.length; i++) {
-          const r = rows[i];
-          if (r && r[iTi] && typeof r[iTi] === 'string' && r[iTi].trim()) {
-            importedStats.add((r[iS] || 'Da fare').toString().trim());
-          }
-        }
-        const existingStatNames = new Set(state.statuses.map(s => s.name));
-        const newStats = [...importedStats].filter(s => !existingStatNames.has(s));
-        if (newStats.length) {
-          await db.from('statuses').insert(newStats.map(name => ({ name, color: '#94A3B8' })));
-          await loadAll(); // reload to get updated types
-        } else {
-          await loadAll();
-        }
-
-        // Build sections array
-        const sections = [];
+        // Collect unique types, statuses, materiali from file
+        const newTypes = new Set(), newStats = new Set(), newMats = new Set();
+        const dataRows = [];
         for (let i = hi + 1; i < rows.length; i++) {
           const r = rows[i];
           if (!r || !r[iTi] || typeof r[iTi] !== 'string' || !r[iTi].trim()) continue;
           const pages = parseInt(r[iP]);
           if (!pages || pages < 1) continue;
-          sections.push({
-            title:        r[iTi].trim(),
-            content_type: (r[iT]||'REDAZIONALE').toString().trim(),
-            pages_count:  pages,
-            status:       (r[iS]||'Da fare').toString().trim(),
-            materiali:    MATERIALI_OPTIONS.includes(r[iM]) ? r[iM] : 'Mancanti',
-            url:          r[iU] ? r[iU].toString().trim() : null,
-            notes:        r[iN] ? r[iN].toString().trim() : null,
-            color:        getTypeColor((r[iT]||'REDAZIONALE').toString().trim()),
-            position:     sections.length,
+          const tipo = (r[iT]||'REDAZIONALE').toString().trim();
+          const stato = (r[iS]||'Da fare').toString().trim();
+          const mat = r[iM] ? r[iM].toString().trim() : 'Mancanti';
+          newTypes.add(tipo); newStats.add(stato); newMats.add(mat);
+          dataRows.push({ tipo, stato, mat,
+            title: r[iTi].trim(),
+            pages_count: pages,
+            url: r[iU] ? r[iU].toString().trim() : null,
+            notes: r[iN] ? r[iN].toString().trim() : null,
           });
         }
 
-        if (!sections.length) { alert('Nessuna sezione trovata nel file.'); return; }
+        if (!dataRows.length) { alert('Nessuna sezione trovata nel file.'); return; }
+
+        // Ensure all types/statuses/materiali exist in DB
+        const existT = new Set(state.contentTypes.map(x => x.name));
+        const existS = new Set(state.statuses.map(x => x.name));
+        const existM = new Set(state.materialiStatuses.map(x => x.name));
+
+        const toInsertT = [...newTypes].filter(x => !existT.has(x)).map(n => ({ name: n, color: '#6B7280' }));
+        const toInsertS = [...newStats].filter(x => !existS.has(x)).map(n => ({ name: n, color: '#94A3B8' }));
+        const toInsertM = [...newMats].filter(x => !existM.has(x)).map(n => ({ name: n, color: '#94A3B8' }));
+
+        if (toInsertT.length) await db.from('content_types').insert(toInsertT);
+        if (toInsertS.length) await db.from('statuses').insert(toInsertS);
+        if (toInsertM.length) await db.from('materiali_statuses').insert(toInsertM);
+        if (toInsertT.length || toInsertS.length || toInsertM.length) await loadAll();
 
         const replace = confirm(
-          `Trovate ${sections.length} sezioni nel file Excel.\n\n` +
+          `Trovate ${dataRows.length} sezioni nel file.\n\n` +
           `OK = Sostituisci tutte le sezioni esistenti\n` +
-          `Annulla = Aggiungi in fondo alle esistenti`
+          `Annulla = Aggiungi in fondo`
         );
 
-        if (replace) {
-          if (state.sections.length) {
-            await db.from('sections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-          }
-        } else {
-          const maxPos = state.sections.length ? Math.max(...state.sections.map(s => s.position)) + 1 : 0;
-          sections.forEach((s, i) => s.position = maxPos + i);
+        if (replace && state.sections.length) {
+          await db.from('sections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
         }
 
-        await db.from('sections').insert(sections);
-        await loadAll();
-        renderCurrentView();
-        alert(`✓ ${sections.length} sezioni importate con successo!`);
+        const basePos = replace ? 0 : (state.sections.length ? Math.max(...state.sections.map(s => s.position)) + 1 : 0);
+
+        const sections = dataRows.map((r, i) => ({
+          title: r.title, content_type: r.tipo, pages_count: r.pages_count,
+          status: r.stato, materiali: r.mat, url: r.url, notes: r.notes,
+          color: getTypeColor(r.tipo), position: basePos + i,
+        }));
+
+        // Insert in batches of 50 to avoid request limits
+        for (let i = 0; i < sections.length; i += 50) {
+          await db.from('sections').insert(sections.slice(i, i + 50));
+        }
+
+        await loadAll(); renderCurrentView();
+        alert(`✓ ${sections.length} sezioni importate!`);
       } catch (err) {
-        alert('Errore durante l\'importazione: ' + err.message);
+        alert('Errore: ' + err.message);
       }
     };
     reader.readAsArrayBuffer(file);
@@ -811,16 +759,10 @@ function importExcel() {
 function exportExcel() {
   const wp = calcPages(state.sections);
   const rows = wp.map((s, i) => ({
-    '#':              i + 1,
-    'Stato':          s.status,
-    'Tipo':           s.content_type,
-    'Titolo':         s.title,
-    'N.Pagine':       s.pages_count,
-    'Pag.Inizio':     s.start_page,
-    'Pag.Fine':       s.end_page,
-    'Materiali':      s.materiali || 'Mancanti',
-    'URL':            s.url || '',
-    'Note':           s.notes || '',
+    '#': i+1, 'Stato': s.status, 'Tipo': s.content_type,
+    'Titolo': s.title, 'N.Pagine': s.pages_count,
+    'Pag.Inizio': s.start_page, 'Pag.Fine': s.end_page,
+    'Materiali': s.materiali||'Mancanti', 'URL': s.url||'', 'Note': s.notes||'',
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
   ws['!cols'] = [6,18,16,40,9,12,10,14,40,30].map(w => ({ wch: w }));
@@ -841,11 +783,13 @@ function getStatusColor(name) {
   const s = state.statuses.find(x => x.name === name);
   return s ? s.color : '#94A3B8';
 }
+function getMatColor(name) {
+  const m = state.materialiStatuses.find(x => x.name === name);
+  return m ? m.color : '#94A3B8';
+}
 function isLight(hex) {
-  const c = hex.replace('#','');
-  const r = parseInt(c.substr(0,2),16);
-  const g = parseInt(c.substr(2,2),16);
-  const b = parseInt(c.substr(4,2),16);
+  const c = (hex||'#888').replace('#','');
+  const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
   return (r*299 + g*587 + b*114) / 1000 > 150;
 }
 function escHtml(str) {
@@ -853,7 +797,4 @@ function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// ============================================================
-//  START
-// ============================================================
 document.addEventListener('DOMContentLoaded', init);

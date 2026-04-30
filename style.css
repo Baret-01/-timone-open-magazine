@@ -225,6 +225,7 @@ nav { display: flex; gap: .2rem; flex: 1; }
 
 /* ===== IMPOSTAZIONI ===== */
 .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+.settings-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.25rem; }
 .settings-card { background: #fff; border-radius: 12px; padding: 1.1rem; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
 .settings-card h3 { font-size: .95rem; margin-bottom: .9rem; display: flex; align-items: center; justify-content: space-between; }
 .type-list { display: flex; flex-direction: column; gap: .45rem; }
