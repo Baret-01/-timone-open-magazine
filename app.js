@@ -219,11 +219,9 @@ function renderLista(container) {
         <td><span class="drag-handle">⠿</span></td>
         <td class="col-num">${i+1}</td>
         <td>
-          <div class="sel-wrap">
-            <span class="sel-dot" style="background:${sc}"></span>
-            <select class="inline-select" data-id="${s.id}" data-field="status"
-              onchange="updateField('${s.id}','status',this.value)">${statOpts}</select>
-          </div>
+          <select class="inline-select status-sel" data-id="${s.id}" data-field="status"
+            style="background:${sc};color:${isLight(sc)?'#1a1a2e':'#fff'}"
+            onchange="updateField('${s.id}','status',this.value);updateStatusSelStyle(this)">${statOpts}</select>
         </td>
         <td>
           <select class="inline-select type-sel" data-id="${s.id}" data-field="content_type"
@@ -333,6 +331,12 @@ function updateTypeSelStyle(sel) {
 
 function updateMatSelStyle(sel) {
   const color = getMatColor(sel.value);
+  sel.style.background = color;
+  sel.style.color = isLight(color) ? '#1a1a2e' : '#fff';
+}
+
+function updateStatusSelStyle(sel) {
+  const color = getStatusColor(sel.value);
   sel.style.background = color;
   sel.style.color = isLight(color) ? '#1a1a2e' : '#fff';
 }
@@ -783,16 +787,52 @@ function importExcel() {
 
 function exportExcel() {
   const wp = calcPages(state.sections);
-  const rows = wp.map((s,i) => ({
-    '#': i+1, 'Stato': s.status, 'Tipo': s.content_type, 'Titolo': s.title,
-    'N.Pagine': s.pages_count, 'Pag.Inizio': s.start_page, 'Pag.Fine': s.end_page,
-    'Materiali': s.materiali||'Mancanti', 'URL': s.url||'', 'Note': s.notes||'',
-  }));
-  const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [6,18,16,40,9,12,10,14,40,30].map(w=>({wch:w}));
+  const toRgb = hex => (hex||'#888888').replace('#','').toUpperCase().padEnd(6,'0');
+
+  const hdrStyle = {
+    font: { bold: true, color: { rgb: 'FFFFFF' } },
+    fill: { patternType: 'solid', fgColor: { rgb: '1A1A2E' } },
+    alignment: { horizontal: 'center', vertical: 'center' },
+    border: { bottom: { style: 'thin', color: { rgb: 'CCCCCC' } } },
+  };
+  const cellSt = (bgHex, fgHex) => ({
+    fill: { patternType: 'solid', fgColor: { rgb: toRgb(bgHex) } },
+    font: { color: { rgb: toRgb(fgHex) } },
+    alignment: { vertical: 'center' },
+  });
+  const numSt = { alignment: { horizontal: 'center', vertical: 'center' } };
+
+  const headers = ['#','Stato','Tipo','Titolo','N.Pagine','Pag.Inizio','Pag.Fine','Materiali','URL','Note'];
+  const hRow = headers.map(h => ({ v: h, t: 's', s: hdrStyle }));
+
+  const dataRows = wp.map((s, i) => {
+    const sc = getStatusColor(s.status);
+    const tc = getTypeColor(s.content_type);
+    const mc = getMatColor(s.materiali || 'Mancanti');
+    const sfg = isLight(sc) ? '#1a1a2e' : '#ffffff';
+    const tfg = isLight(tc) ? '#1a1a2e' : '#ffffff';
+    const mfg = isLight(mc) ? '#1a1a2e' : '#ffffff';
+    return [
+      { v: i + 1, t: 'n', s: numSt },
+      { v: s.status || '', t: 's', s: cellSt(sc, sfg) },
+      { v: s.content_type || '', t: 's', s: cellSt(tc, tfg) },
+      { v: s.title || '', t: 's' },
+      { v: s.pages_count, t: 'n', s: numSt },
+      { v: s.start_page, t: 'n', s: numSt },
+      { v: s.end_page, t: 'n', s: numSt },
+      { v: s.materiali || 'Mancanti', t: 's', s: cellSt(mc, mfg) },
+      { v: s.url || '', t: 's' },
+      { v: s.notes || '', t: 's' },
+    ];
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet([hRow, ...dataRows]);
+  ws['!cols'] = [5, 22, 18, 44, 9, 11, 9, 16, 40, 32].map(w => ({ wch: w }));
+  ws['!rows'] = [{ hpt: 22 }];
+
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Timone');
-  XLSX.writeFile(wb, `Timone_${MAGAZINE_NAME.replace(/\s+/g,'_')}.xlsx`);
+  XLSX.utils.book_append_sheet(wb, ws, 'LISTA');
+  XLSX.writeFile(wb, `Timone_${MAGAZINE_NAME.replace(/\s+/g, '_')}.xlsx`);
 }
 
 // ============================================================
