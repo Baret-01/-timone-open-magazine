@@ -117,17 +117,10 @@ async function loadAll() {
     db.from('statuses').select('*').order('name'),
     db.from('materiali_statuses').select('*').order('name'),
   ]);
-
-  // Seed defaults if empty
-  if (typRes.data && typRes.data.length === 0)
-    await db.from('content_types').insert(DEFAULT_TYPES);
-  if (stRes.data && stRes.data.length === 0)
-    await db.from('statuses').insert(DEFAULT_STATUSES);
-  if (matRes.data && matRes.data.length === 0)
-    await db.from('materiali_statuses').insert(DEFAULT_MATERIALI);
-
-  if ((typRes.data?.length === 0) || (stRes.data?.length === 0) || (matRes.data?.length === 0))
-    return loadAll();
+  if (typRes.data?.length === 0) await db.from('content_types').insert(DEFAULT_TYPES);
+  if (stRes.data?.length === 0)  await db.from('statuses').insert(DEFAULT_STATUSES);
+  if (matRes.data?.length === 0) await db.from('materiali_statuses').insert(DEFAULT_MATERIALI);
+  if (!typRes.data?.length || !stRes.data?.length || !matRes.data?.length) return loadAll();
 
   state.sections          = secRes.data || [];
   state.contentTypes      = typRes.data || [];
@@ -145,21 +138,24 @@ function subscribeRealtime() {
 
 // ============================================================
 //  PAGE CALCULATION
+//  La prima sezione della lista è sempre pagina 1 (la Cover).
 // ============================================================
 
 function calcPages(sections) {
-  let page = 2;
+  let page = 1;
   return sections.map(s => {
-    const start = page, end = page + s.pages_count - 1;
+    const start = page;
+    const end   = page + s.pages_count - 1;
     page = end + 1;
     return { ...s, start_page: start, end_page: end };
   });
 }
+
 function totalPages(sections) {
-  if (!sections.length) return 1;
-  const wp = calcPages(sections);
-  return wp[wp.length - 1].end_page;
+  if (!sections.length) return 0;
+  return calcPages(sections).at(-1).end_page;
 }
+
 function nextMultiple(n, m) {
   return n % m === 0 ? n : n + (m - (n % m));
 }
@@ -177,7 +173,7 @@ function renderCurrentView() {
 }
 
 // ============================================================
-//  LISTA
+//  LISTA — inline editing
 // ============================================================
 
 function renderLista(container) {
@@ -188,35 +184,68 @@ function renderLista(container) {
   const m4  = nextMultiple(tot, 4);
 
   let badge = '';
-  if (tot % 16 === 0)     badge = `<span class="pc-badge pc-green">✓ Multiplo di 16 — ottimale</span>`;
-  else if (tot % 8 === 0) badge = `<span class="pc-badge pc-yellow">⚠ Multiplo di 8</span><span class="pc-info">+${m16-tot}p per ${m16} (×16)</span>`;
-  else if (tot % 4 === 0) badge = `<span class="pc-badge pc-yellow">⚠ Multiplo di 4</span><span class="pc-info">+${m8-tot}p per ${m8} (×8) · +${m16-tot}p per ${m16} (×16)</span>`;
-  else                     badge = `<span class="pc-badge pc-red">✗ Non multiplo di 4</span><span class="pc-info">Prossimi: ${m4}p (×4) · ${m8}p (×8) · ${m16}p (×16)</span>`;
+  if (!tot)                badge = '';
+  else if (tot % 16 === 0) badge = `<span class="pc-badge pc-green">✓ Multiplo di 16 — ottimale</span>`;
+  else if (tot % 8 === 0)  badge = `<span class="pc-badge pc-yellow">⚠ ×8</span><span class="pc-info">+${m16-tot}p per ${m16} (×16)</span>`;
+  else if (tot % 4 === 0)  badge = `<span class="pc-badge pc-yellow">⚠ ×4</span><span class="pc-info">+${m8-tot}p per ${m8} (×8) · +${m16-tot}p per ${m16} (×16)</span>`;
+  else                      badge = `<span class="pc-badge pc-red">✗ Non ×4</span><span class="pc-info">${m4}p (×4) · ${m8}p (×8) · ${m16}p (×16)</span>`;
 
   let rows = '';
   if (!wp.length) {
-    rows = `<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📄</div><p>Nessuna sezione. Clicca "Aggiungi" o usa "Importa" per caricare dal tuo Excel.</p></div></td></tr>`;
+    rows = `<tr><td colspan="11"><div class="empty-state"><div class="empty-icon">📄</div><p>Nessuna sezione. Clicca "Aggiungi" o usa "Importa".</p></div></td></tr>`;
   } else {
-    rows = wp.map(s => {
+    rows = wp.map((s, i) => {
       const tc  = getTypeColor(s.content_type);
+      const tTC = isLight(tc) ? '#1a1a2e' : '#fff';
       const sc  = getStatusColor(s.status);
       const mc  = getMatColor(s.materiali);
       const mTC = isLight(mc) ? '#1a1a2e' : '#fff';
-      const urlH = s.url ? `<a class="url-link" href="${escHtml(s.url)}" target="_blank" rel="noopener">🔗</a>` : '';
+
+      const typeOpts = state.contentTypes.map(t =>
+        `<option value="${escHtml(t.name)}" ${s.content_type===t.name?'selected':''}>${escHtml(t.name)}</option>`
+      ).join('');
+      const statOpts = state.statuses.map(t =>
+        `<option value="${escHtml(t.name)}" ${s.status===t.name?'selected':''}>${escHtml(t.name)}</option>`
+      ).join('');
+      const matOpts = state.materialiStatuses.map(m =>
+        `<option value="${escHtml(m.name)}" ${(s.materiali||'Mancanti')===m.name?'selected':''}>${escHtml(m.name)}</option>`
+      ).join('');
+
+      const urlCell = s.url
+        ? `<a class="url-link" href="${escHtml(s.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🔗</a>`
+        : `<span class="url-empty">—</span>`;
+
       return `<tr data-id="${s.id}">
         <td><span class="drag-handle">⠿</span></td>
-        <td><span class="type-badge" style="background:${tc}">${escHtml(s.content_type)}</span></td>
-        <td style="max-width:240px">
-          <strong>${escHtml(s.title)}</strong>
-          ${s.notes ? `<br><small style="color:#6B7280">${escHtml(s.notes)}</small>` : ''}
+        <td class="col-num">${i+1}</td>
+        <td>
+          <div class="sel-wrap">
+            <span class="sel-dot" style="background:${sc}"></span>
+            <select class="inline-select" data-id="${s.id}" data-field="status"
+              onchange="updateField('${s.id}','status',this.value)">${statOpts}</select>
+          </div>
         </td>
-        <td><span class="status-dot" style="color:${sc}">${escHtml(s.status)}</span></td>
-        <td><span class="mat-badge" style="background:${mc};color:${mTC}">${escHtml(s.materiali||'Mancanti')}</span></td>
-        <td>${urlH}</td>
-        <td class="pages-count">${s.pages_count}p</td>
-        <td class="page-range">${s.start_page}–${s.end_page}</td>
-        <td class="row-actions">
-          <button class="btn-icon" onclick="openEditor('${s.id}')">✏️</button>
+        <td>
+          <select class="inline-select type-sel" data-id="${s.id}" data-field="content_type"
+            style="background:${tc};color:${tTC}"
+            onchange="updateField('${s.id}','content_type',this.value);updateTypeSelStyle(this)">${typeOpts}</select>
+        </td>
+        <td class="cell-edit" onclick="editCell(this,'${s.id}','title',false)">
+          <span class="cell-val">${escHtml(s.title)}</span>
+          ${s.notes ? `<span class="cell-notes">${escHtml(s.notes)}</span>` : ''}
+        </td>
+        <td>
+          <select class="inline-select mat-sel" data-id="${s.id}" data-field="materiali"
+            style="background:${mc};color:${mTC}"
+            onchange="updateField('${s.id}','materiali',this.value);updateMatSelStyle(this)">${matOpts}</select>
+        </td>
+        <td class="cell-edit url-cell" onclick="editCell(this,'${s.id}','url',false)">${urlCell}</td>
+        <td class="cell-edit num-cell" onclick="editCell(this,'${s.id}','pages_count',true)">
+          <span class="cell-val">${s.pages_count}</span>
+        </td>
+        <td class="page-num-cell">${s.start_page}</td>
+        <td class="page-num-cell">${s.end_page}</td>
+        <td>
           <button class="btn-icon" onclick="confirmDelete('${s.id}','${escHtml(s.title).replace(/'/g,"\\'")}')">🗑</button>
         </td>
       </tr>`;
@@ -226,7 +255,7 @@ function renderLista(container) {
   container.innerHTML = `
     <div class="lista-header">
       <h2>Sezioni — ${escHtml(MAGAZINE_NAME)}</h2>
-      <button class="btn-primary" onclick="openEditor(null)">+ Aggiungi sezione</button>
+      <button class="btn-primary" onclick="openAddModal()">+ Aggiungi sezione</button>
     </div>
     <div class="page-counter-bar">
       <span class="pc-total">📄 Totale pagine: <strong>${tot}</strong></span>
@@ -234,15 +263,78 @@ function renderLista(container) {
     </div>
     <table class="section-table">
       <thead><tr>
-        <th style="width:30px"></th>
-        <th>Tipo</th><th>Titolo</th><th>Stato</th>
-        <th>Materiali</th><th style="width:30px">URL</th>
-        <th>Pag.</th><th>Posizione</th><th style="width:68px"></th>
+        <th style="width:28px"></th>
+        <th style="width:26px">#</th>
+        <th>Stato</th>
+        <th>Tipo</th>
+        <th>Titolo</th>
+        <th>Materiali</th>
+        <th style="width:38px">URL</th>
+        <th style="width:52px">N.Pag</th>
+        <th style="width:62px">P.Inizio</th>
+        <th style="width:55px">P.Fine</th>
+        <th style="width:34px"></th>
       </tr></thead>
       <tbody id="sections-tbody">${rows}</tbody>
     </table>`;
 
   if (state.sections.length) initSortable();
+}
+
+// ============================================================
+//  INLINE EDITING
+// ============================================================
+
+function editCell(td, id, field, isNumber) {
+  if (td.querySelector('input')) return; // already editing
+
+  const section = state.sections.find(s => s.id === id);
+  const currentVal = section ? (section[field] ?? '') : '';
+
+  const input = document.createElement('input');
+  input.type  = isNumber ? 'number' : 'text';
+  input.value = currentVal;
+  input.className = 'inline-input';
+  if (isNumber) { input.min = 1; input.max = 200; }
+
+  td.innerHTML = '';
+  td.appendChild(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  const save = async () => {
+    if (done) return;
+    done = true;
+    const val = isNumber ? parseInt(input.value) : input.value.trim();
+    if (isNumber && (!val || val < 1)) { renderCurrentView(); return; }
+    await updateField(id, field, val);
+  };
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') input.blur();
+    if (e.key === 'Escape') { done = true; renderCurrentView(); }
+  });
+}
+
+async function updateField(id, field, value) {
+  const payload = { [field]: value };
+  await db.from('sections').update(payload).eq('id', id);
+  const s = state.sections.find(x => x.id === id);
+  if (s) Object.assign(s, payload);
+  renderCurrentView();
+}
+
+function updateTypeSelStyle(sel) {
+  const color = getTypeColor(sel.value);
+  sel.style.background = color;
+  sel.style.color = isLight(color) ? '#1a1a2e' : '#fff';
+}
+
+function updateMatSelStyle(sel) {
+  const color = getMatColor(sel.value);
+  sel.style.background = color;
+  sel.style.color = isLight(color) ? '#1a1a2e' : '#fff';
 }
 
 function initSortable() {
@@ -260,74 +352,44 @@ function initSortable() {
 }
 
 // ============================================================
-//  EDITOR MODAL
+//  ADD MODAL (solo per nuove sezioni)
 // ============================================================
 
-function openEditor(id) {
-  const s    = id ? state.sections.find(x => x.id === id) : null;
-  const isNew = !s;
-
-  const typeOpts = state.contentTypes.map(t =>
-    `<option value="${escHtml(t.name)}" ${s?.content_type === t.name ? 'selected':''}>${escHtml(t.name)}</option>`
-  ).join('');
-  const statOpts = state.statuses.map(t =>
-    `<option value="${escHtml(t.name)}" ${s?.status === t.name ? 'selected':''}>${escHtml(t.name)}</option>`
-  ).join('');
-  const matOpts = state.materialiStatuses.map(m =>
-    `<option value="${escHtml(m.name)}" ${(s?.materiali||'Mancanti') === m.name ? 'selected':''}>${escHtml(m.name)}</option>`
-  ).join('');
+function openAddModal() {
+  const typeOpts = state.contentTypes.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
+  const statOpts = state.statuses.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
+  const matOpts  = state.materialiStatuses.map(m => `<option value="${escHtml(m.name)}">${escHtml(m.name)}</option>`).join('');
 
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">
-      <span>${isNew ? '➕ Nuova sezione' : '✏️ Modifica sezione'}</span>
+      <span>➕ Nuova sezione</span>
       <button class="btn-icon" onclick="closeModal()">✕</button>
     </div>
     <div class="form-grid">
       <div class="form-group">
         <label>Titolo *</label>
-        <input type="text" id="f-title" value="${escHtml(s?.title||'')}" placeholder="Es. Intervista con…">
+        <input type="text" id="f-title" placeholder="Es. Intervista con…">
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label>Tipo *</label>
-          <select id="f-type">${typeOpts}</select>
-        </div>
-        <div class="form-group">
-          <label>N. Pagine *</label>
-          <input type="number" id="f-pages" value="${s?.pages_count||2}" min="1" max="200">
-        </div>
+        <div class="form-group"><label>Tipo *</label><select id="f-type">${typeOpts}</select></div>
+        <div class="form-group"><label>N. Pagine *</label><input type="number" id="f-pages" value="2" min="1" max="200"></div>
       </div>
       <div class="form-row">
-        <div class="form-group">
-          <label>Stato lavorazione</label>
-          <select id="f-status">${statOpts}</select>
-        </div>
-        <div class="form-group">
-          <label>Materiali</label>
-          <select id="f-materiali">${matOpts}</select>
-        </div>
+        <div class="form-group"><label>Stato</label><select id="f-status">${statOpts}</select></div>
+        <div class="form-group"><label>Materiali</label><select id="f-materiali">${matOpts}</select></div>
       </div>
-      <div class="form-group">
-        <label>URL Materiali (Dropbox, Drive…)</label>
-        <input type="url" id="f-url" value="${escHtml(s?.url||'')}" placeholder="https://…">
-      </div>
-      <div class="form-group">
-        <label>Note</label>
-        <textarea id="f-notes" rows="2">${escHtml(s?.notes||'')}</textarea>
-      </div>
+      <div class="form-group"><label>URL Materiali</label><input type="url" id="f-url" placeholder="https://…"></div>
+      <div class="form-group"><label>Note</label><textarea id="f-notes" rows="2"></textarea></div>
     </div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal()">Annulla</button>
-      <button class="btn-primary" onclick="saveSection('${id||''}')">
-        ${isNew ? 'Aggiungi' : 'Salva'}
-      </button>
+      <button class="btn-primary" onclick="saveNewSection()">Aggiungi</button>
     </div>`;
-
   document.getElementById('modal-overlay').classList.remove('hidden');
   document.getElementById('f-title').focus();
 }
 
-async function saveSection(id) {
+async function saveNewSection() {
   const title    = document.getElementById('f-title').value.trim();
   const type     = document.getElementById('f-type').value;
   const pages    = parseInt(document.getElementById('f-pages').value, 10);
@@ -335,18 +397,13 @@ async function saveSection(id) {
   const materiali = document.getElementById('f-materiali').value;
   const url      = document.getElementById('f-url').value.trim() || null;
   const notes    = document.getElementById('f-notes').value.trim() || null;
-
   if (!title)          { alert('Inserisci il titolo.'); return; }
   if (!pages || pages < 1) { alert('Numero pagine non valido.'); return; }
-
-  const payload = { title, content_type: type, pages_count: pages, status, materiali, url, notes, color: getTypeColor(type) };
-
-  if (id) {
-    await db.from('sections').update(payload).eq('id', id);
-  } else {
-    const maxPos = state.sections.length ? Math.max(...state.sections.map(s => s.position)) + 1 : 0;
-    await db.from('sections').insert({ ...payload, position: maxPos });
-  }
+  const maxPos = state.sections.length ? Math.max(...state.sections.map(s => s.position)) + 1 : 0;
+  await db.from('sections').insert({
+    title, content_type: type, pages_count: pages, status, materiali, url, notes,
+    color: getTypeColor(type), position: maxPos,
+  });
   closeModal();
   await loadAll(); renderCurrentView();
 }
@@ -372,7 +429,7 @@ function renderDashboard(container) {
   const m16 = nextMultiple(tot, 16);
   const m8  = nextMultiple(tot, 8);
   const m4  = nextMultiple(tot, 4);
-  const pct = v => tot > 1 ? Math.round(v / (tot - 1) * 100) : 0;
+  const pct = v => tot > 0 ? Math.round(v / tot * 100) : 0;
 
   const byType = {};
   state.contentTypes.forEach(t => { byType[t.name] = 0; });
@@ -388,7 +445,7 @@ function renderDashboard(container) {
 
   const typeRows = state.contentTypes
     .filter(t => (byType[t.name]||0) > 0)
-    .sort((a,b) => (byType[b.name]||0) - (byType[a.name]||0))
+    .sort((a,b) => (byType[b.name]||0)-(byType[a.name]||0))
     .map(t => {
       const v = byType[t.name]||0, p = pct(v);
       return `<div class="type-bar-row">
@@ -405,20 +462,20 @@ function renderDashboard(container) {
     const ns = wp.filter(x => x.status === s.name).length;
     return `<div class="dash-stat-row">
       <span style="display:flex;align-items:center;gap:.4rem">
-        <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block"></span>
+        <span style="width:8px;height:8px;border-radius:50%;background:${s.color};display:inline-block;flex-shrink:0"></span>
         ${escHtml(s.name)}
       </span>
-      <span><strong>${v}p</strong> <span class="dash-stat-pct">${ns} art. · ${p}%</span></span>
+      <span><strong>${v}p</strong><span class="dash-stat-pct">${ns} art. · ${p}%</span></span>
     </div>`;
   }).join('');
 
   const matRows = state.materialiStatuses.map(m => {
-    const v  = byMat[m.name]||0;
+    const v = byMat[m.name]||0;
     const ns = wp.filter(s => (s.materiali||'Mancanti') === m.name).length;
     const tc = isLight(m.color) ? '#1a1a2e' : '#fff';
     return `<div class="dash-stat-row">
       <span><span class="mat-badge" style="background:${m.color};color:${tc}">${escHtml(m.name)}</span></span>
-      <span><strong>${v}p</strong> <span class="dash-stat-pct">${ns} art.</span></span>
+      <span><strong>${v}p</strong><span class="dash-stat-pct">${ns} art.</span></span>
     </div>`;
   }).join('');
 
@@ -431,9 +488,8 @@ function renderDashboard(container) {
     </div>`;
   };
 
-  const adv    = byType['ADV']||0;
-  const red    = ['REDAZIONALE','CORPORATE','ATTUALITA','LIFESTYLE','RETAIL']
-                   .reduce((acc,k) => acc + (byType[k]||0), 0);
+  const adv = byType['ADV']||0;
+  const red = ['REDAZIONALE','CORPORATE','ATTUALITA','LIFESTYLE','RETAIL'].reduce((a,k)=>a+(byType[k]||0),0);
 
   container.innerHTML = `
     <h2 style="margin-bottom:1.1rem">Dashboard — ${escHtml(MAGAZINE_NAME)}</h2>
@@ -447,29 +503,17 @@ function renderDashboard(container) {
         <div class="dash-stat-row"><span>ADV</span><span><strong>${adv}p</strong><span class="dash-stat-pct">${pct(adv)}%</span></span></div>
         <div class="dash-stat-row"><span>Redazionale</span><span><strong>${red}p</strong><span class="dash-stat-pct">${pct(red)}%</span></span></div>
       </div>
-      <div class="dash-card">
-        <h3>Segnatura di stampa</h3>
-        ${mkSeg(16, m16, m16-tot)}
-        ${mkSeg(8,  m8,  m8-tot)}
-        ${mkSeg(4,  m4,  m4-tot)}
-      </div>
-      <div class="dash-card">
-        <h3>Pagine per tipo</h3>
-        ${typeRows || '<p style="color:#9CA3AF;font-size:.85rem">Nessuna sezione.</p>'}
-      </div>
-      <div class="dash-card">
-        <h3>Avanzamento lavorazione</h3>
-        ${statusRows}
-      </div>
-      <div class="dash-card">
-        <h3>Stato materiali</h3>
-        ${matRows}
-      </div>
+      <div class="dash-card"><h3>Segnatura di stampa</h3>${mkSeg(16,m16,m16-tot)}${mkSeg(8,m8,m8-tot)}${mkSeg(4,m4,m4-tot)}</div>
+      <div class="dash-card"><h3>Pagine per tipo</h3>${typeRows||'<p style="color:#9CA3AF;font-size:.85rem">Nessuna sezione.</p>'}</div>
+      <div class="dash-card"><h3>Avanzamento lavorazione</h3>${statusRows}</div>
+      <div class="dash-card"><h3>Stato materiali</h3>${matRows}</div>
     </div>`;
 }
 
 // ============================================================
 //  TIMONE VISIVO
+//  - Colori sempre derivati dal tipo (non dal campo color salvato)
+//  - Cover p.1 a sinistra, IV copertina a destra nella stessa riga
 // ============================================================
 
 function renderTimone(container) {
@@ -477,26 +521,29 @@ function renderTimone(container) {
   const tot = totalPages(state.sections);
   const displayTotal = nextMultiple(Math.max(tot, 4), 4);
 
+  // page → section map
   const pageMap = {};
   wp.forEach(s => { for (let p = s.start_page; p <= s.end_page; p++) pageMap[p] = s; });
 
   const firstSec = wp[0];
   const lastSec  = wp[wp.length - 1];
-  const hasIV    = lastSec && lastSec.content_type?.toUpperCase() === 'COVER';
+  const hasIV    = lastSec && lastSec.content_type?.toUpperCase() === 'COVER' && lastSec.id !== firstSec?.id;
   const ivPage   = hasIV ? lastSec.end_page : -1;
 
-  const coverColor = firstSec ? (firstSec.color || getTypeColor(firstSec.content_type)) : '#1a1a2e';
-  const coverTc    = isLight(coverColor) ? '#1a1a2e' : '#fff';
-  const coverCell  = `<div class="cover-single">
-    <div class="cover-page" style="background:${coverColor};color:${coverTc}">
+  // Cover cell (p.1)
+  const cc  = getTypeColor(firstSec?.content_type || 'COVER');
+  const cTC = isLight(cc) ? '#1a1a2e' : '#fff';
+  const coverCell = `<div class="cover-single">
+    <div class="cover-page" style="background:${cc};color:${cTC}">
       <div class="page-num">p. 1</div>
       <div class="page-type-lbl">${escHtml(firstSec?.content_type||'COVER')}</div>
       <div class="page-title-lbl">${escHtml(firstSec?.title||'COVER')}</div>
     </div></div>`;
 
+  // IV copertina cell
   let ivCell = '';
   if (hasIV) {
-    const ic = lastSec.color || getTypeColor(lastSec.content_type);
+    const ic = getTypeColor(lastSec.content_type);
     const it = isLight(ic) ? '#1a1a2e' : '#fff';
     ivCell = `<div class="cover-single">
       <div class="cover-page" style="background:${ic};color:${it}">
@@ -506,15 +553,23 @@ function renderTimone(container) {
       </div></div>`;
   }
 
+  // Spreads (pages 2..displayTotal, skip IV page)
   const spreads = [];
   for (let p = 2; p <= displayTotal; p += 2) {
     const lp = p, rp = p + 1;
-    const lSec = lp === ivPage ? null : pageMap[lp];
-    const rSec = rp === ivPage ? null : pageMap[rp];
-    spreads.push(buildSpread(lSec, lp, rSec, rp));
+    spreads.push(buildSpread(
+      lp === ivPage ? null : pageMap[lp], lp,
+      rp === ivPage ? null : pageMap[rp], rp
+    ));
   }
 
-  let gridHtml = `<div class="timone-cover-row">${coverCell}</div>`;
+  // Grid: cover row (IV on right), then rows of 4
+  let gridHtml = `
+    <div class="timone-cover-row">
+      ${coverCell}
+      ${ivCell}
+    </div>`;
+
   for (let i = 0; i < spreads.length; i += 4) {
     const chunk = spreads.slice(i, i + 4);
     const fp = 2 + i * 2, lp2 = fp + chunk.length * 2 - 1;
@@ -523,7 +578,6 @@ function renderTimone(container) {
       ${chunk.join('')}
     </div>`;
   }
-  if (hasIV) gridHtml += `<div class="timone-bottom-row">${ivCell}</div>`;
 
   const usedTypes   = [...new Set(wp.map(s => s.content_type))];
   const legendItems = usedTypes.map(name => {
@@ -543,18 +597,14 @@ function renderTimone(container) {
 }
 
 function buildSpread(leftSec, lp, rightSec, rp) {
-  if (!leftSec && !rightSec) {
-    return `<div class="spread empty-spread">
-      <div class="page-half"></div>
-      <div class="fold-line"></div>
-      <div class="page-half"></div>
-    </div>`;
-  }
-  const lc = leftSec  ? (leftSec.color  || getTypeColor(leftSec.content_type))  : '#F3F4F6';
-  const rc = rightSec ? (rightSec.color || getTypeColor(rightSec.content_type)) : '#F3F4F6';
+  // Colori SEMPRE da getTypeColor, mai dal campo color salvato
+  const lc = leftSec  ? getTypeColor(leftSec.content_type)  : '#F3F4F6';
+  const rc = rightSec ? getTypeColor(rightSec.content_type) : '#F3F4F6';
   const lt = isLight(lc) ? '#1a1a2e' : '#fff';
   const rt = isLight(rc) ? '#1a1a2e' : '#fff';
-  return `<div class="spread">
+  const isEmpty = !leftSec && !rightSec;
+
+  return `<div class="spread${isEmpty?' empty-spread':''}">
     <div class="page-half" style="background:${lc};color:${lt}">
       <div class="page-num">p. ${lp}</div>
       ${leftSec  ? `<div class="page-type-lbl">${escHtml(leftSec.content_type)}</div><div class="page-title-lbl">${escHtml(leftSec.title)}</div>` : ''}
@@ -592,7 +642,7 @@ function renderImpostazioni(container) {
         <div class="type-list">${mkList(state.contentTypes,'type')}</div>
       </div>
       <div class="settings-card">
-        <h3>Stati di lavorazione
+        <h3>Stato lavorazione
           <button class="btn-primary" style="font-size:.75rem;padding:.28rem .65rem" onclick="openTypeEditor('status',null)">+ Aggiungi</button>
         </h3>
         <div class="type-list">${mkList(state.statuses,'status')}</div>
@@ -607,13 +657,12 @@ function renderImpostazioni(container) {
 }
 
 function openTypeEditor(kind, id) {
-  const list  = kind === 'type' ? state.contentTypes : kind === 'status' ? state.statuses : state.materialiStatuses;
-  const item  = id ? list.find(x => x.id === id) : null;
-  const labels = { type: 'tipo', status: 'stato', materiali: 'stato materiali' };
-
+  const list  = kind==='type' ? state.contentTypes : kind==='status' ? state.statuses : state.materialiStatuses;
+  const item  = id ? list.find(x => x.id===id) : null;
+  const labels = { type:'tipo', status:'stato lavorazione', materiali:'stato materiali' };
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">
-      <span>${item ? '✏️ Modifica' : '➕ Nuovo'} ${labels[kind]}</span>
+      <span>${item?'✏️ Modifica':'➕ Nuovo'} ${labels[kind]}</span>
       <button class="btn-icon" onclick="closeModal()">✕</button>
     </div>
     <div class="form-grid">
@@ -627,7 +676,7 @@ function openTypeEditor(kind, id) {
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal()">Annulla</button>
       <button class="btn-primary" onclick="saveTypeOrStatus('${kind}','${id||''}')">
-        ${item ? 'Salva' : 'Aggiungi'}
+        ${item?'Salva':'Aggiungi'}
       </button>
     </div>`;
   document.getElementById('modal-overlay').classList.remove('hidden');
@@ -638,7 +687,7 @@ async function saveTypeOrStatus(kind, id) {
   const name  = document.getElementById('ft-name').value.trim();
   const color = document.getElementById('ft-color').value;
   if (!name) { alert('Inserisci un nome.'); return; }
-  const table = kind === 'type' ? 'content_types' : kind === 'status' ? 'statuses' : 'materiali_statuses';
+  const table = kind==='type' ? 'content_types' : kind==='status' ? 'statuses' : 'materiali_statuses';
   if (id) await db.from(table).update({ name, color }).eq('id', id);
   else    await db.from(table).insert({ name, color });
   closeModal();
@@ -647,7 +696,7 @@ async function saveTypeOrStatus(kind, id) {
 
 async function deleteEntry(kind, id, name) {
   if (!confirm(`Eliminare "${name}"?`)) return;
-  const table = kind === 'type' ? 'content_types' : kind === 'status' ? 'statuses' : 'materiali_statuses';
+  const table = kind==='type' ? 'content_types' : kind==='status' ? 'statuses' : 'materiali_statuses';
   await db.from(table).delete().eq('id', id);
   await loadAll(); renderCurrentView();
 }
@@ -665,87 +714,63 @@ function importExcel() {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
-        const data = new Uint8Array(ev.target.result);
-        const wb   = XLSX.read(data, { type: 'array' });
-        const ws   = wb.Sheets['LISTA'];
-        if (!ws) { alert('Foglio "LISTA" non trovato nel file.'); return; }
+        const wb  = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+        const ws  = wb.Sheets['LISTA'];
+        if (!ws) { alert('Foglio "LISTA" non trovato.'); return; }
 
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
         let hi = -1;
         for (let i = 0; i < rows.length; i++) {
-          if (rows[i] && rows[i].includes('Titolo') && rows[i].includes('Stato')) { hi = i; break; }
+          if (rows[i]?.includes('Titolo') && rows[i]?.includes('Stato')) { hi = i; break; }
         }
         if (hi === -1) { alert('Intestazione non trovata.'); return; }
 
-        const hdr  = rows[hi];
-        const col  = name => hdr.indexOf(name);
-        const iS   = col('Stato'), iT = col('Tipo'), iTi = col('Titolo');
-        const iP   = col('N.Pagine'), iM = col('Materiali'), iU = col('URL'), iN = col('Note');
+        const hdr = rows[hi];
+        const col = n => hdr.indexOf(n);
+        const iS=col('Stato'), iT=col('Tipo'), iTi=col('Titolo'),
+              iP=col('N.Pagine'), iM=col('Materiali'), iU=col('URL'), iN=col('Note');
 
-        // Collect unique types, statuses, materiali from file
-        const newTypes = new Set(), newStats = new Set(), newMats = new Set();
+        const newT=new Set(), newS=new Set(), newM=new Set();
         const dataRows = [];
-        for (let i = hi + 1; i < rows.length; i++) {
+        for (let i = hi+1; i < rows.length; i++) {
           const r = rows[i];
-          if (!r || !r[iTi] || typeof r[iTi] !== 'string' || !r[iTi].trim()) continue;
+          if (!r || typeof r[iTi] !== 'string' || !r[iTi].trim()) continue;
           const pages = parseInt(r[iP]);
           if (!pages || pages < 1) continue;
-          const tipo = (r[iT]||'REDAZIONALE').toString().trim();
+          const tipo  = (r[iT]||'REDAZIONALE').toString().trim();
           const stato = (r[iS]||'Da fare').toString().trim();
-          const mat = r[iM] ? r[iM].toString().trim() : 'Mancanti';
-          newTypes.add(tipo); newStats.add(stato); newMats.add(mat);
-          dataRows.push({ tipo, stato, mat,
-            title: r[iTi].trim(),
-            pages_count: pages,
-            url: r[iU] ? r[iU].toString().trim() : null,
-            notes: r[iN] ? r[iN].toString().trim() : null,
-          });
+          const mat   = r[iM] ? r[iM].toString().trim() : 'Mancanti';
+          newT.add(tipo); newS.add(stato); newM.add(mat);
+          dataRows.push({ tipo, stato, mat, title: r[iTi].trim(), pages_count: pages,
+            url: r[iU]?.toString().trim()||null, notes: r[iN]?.toString().trim()||null });
         }
+        if (!dataRows.length) { alert('Nessuna sezione trovata.'); return; }
 
-        if (!dataRows.length) { alert('Nessuna sezione trovata nel file.'); return; }
+        const existT = new Set(state.contentTypes.map(x=>x.name));
+        const existS = new Set(state.statuses.map(x=>x.name));
+        const existM = new Set(state.materialiStatuses.map(x=>x.name));
+        const insT = [...newT].filter(x=>!existT.has(x)).map(n=>({name:n,color:'#6B7280'}));
+        const insS = [...newS].filter(x=>!existS.has(x)).map(n=>({name:n,color:'#94A3B8'}));
+        const insM = [...newM].filter(x=>!existM.has(x)).map(n=>({name:n,color:'#94A3B8'}));
+        if (insT.length) await db.from('content_types').insert(insT);
+        if (insS.length) await db.from('statuses').insert(insS);
+        if (insM.length) await db.from('materiali_statuses').insert(insM);
+        if (insT.length||insS.length||insM.length) await loadAll();
 
-        // Ensure all types/statuses/materiali exist in DB
-        const existT = new Set(state.contentTypes.map(x => x.name));
-        const existS = new Set(state.statuses.map(x => x.name));
-        const existM = new Set(state.materialiStatuses.map(x => x.name));
+        const replace = confirm(`${dataRows.length} sezioni trovate.\n\nOK = Sostituisci tutto\nAnnulla = Aggiungi in fondo`);
+        if (replace && state.sections.length)
+          await db.from('sections').delete().neq('id','00000000-0000-0000-0000-000000000000');
 
-        const toInsertT = [...newTypes].filter(x => !existT.has(x)).map(n => ({ name: n, color: '#6B7280' }));
-        const toInsertS = [...newStats].filter(x => !existS.has(x)).map(n => ({ name: n, color: '#94A3B8' }));
-        const toInsertM = [...newMats].filter(x => !existM.has(x)).map(n => ({ name: n, color: '#94A3B8' }));
-
-        if (toInsertT.length) await db.from('content_types').insert(toInsertT);
-        if (toInsertS.length) await db.from('statuses').insert(toInsertS);
-        if (toInsertM.length) await db.from('materiali_statuses').insert(toInsertM);
-        if (toInsertT.length || toInsertS.length || toInsertM.length) await loadAll();
-
-        const replace = confirm(
-          `Trovate ${dataRows.length} sezioni nel file.\n\n` +
-          `OK = Sostituisci tutte le sezioni esistenti\n` +
-          `Annulla = Aggiungi in fondo`
-        );
-
-        if (replace && state.sections.length) {
-          await db.from('sections').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-        }
-
-        const basePos = replace ? 0 : (state.sections.length ? Math.max(...state.sections.map(s => s.position)) + 1 : 0);
-
-        const sections = dataRows.map((r, i) => ({
+        const base = replace ? 0 : (state.sections.length ? Math.max(...state.sections.map(s=>s.position))+1 : 0);
+        const secs = dataRows.map((r,i) => ({
           title: r.title, content_type: r.tipo, pages_count: r.pages_count,
           status: r.stato, materiali: r.mat, url: r.url, notes: r.notes,
-          color: getTypeColor(r.tipo), position: basePos + i,
+          color: getTypeColor(r.tipo), position: base+i,
         }));
-
-        // Insert in batches of 50 to avoid request limits
-        for (let i = 0; i < sections.length; i += 50) {
-          await db.from('sections').insert(sections.slice(i, i + 50));
-        }
-
+        for (let i=0; i<secs.length; i+=50) await db.from('sections').insert(secs.slice(i,i+50));
         await loadAll(); renderCurrentView();
-        alert(`✓ ${sections.length} sezioni importate!`);
-      } catch (err) {
-        alert('Errore: ' + err.message);
-      }
+        alert(`✓ ${secs.length} sezioni importate!`);
+      } catch(err) { alert('Errore: '+err.message); }
     };
     reader.readAsArrayBuffer(file);
   };
@@ -758,14 +783,13 @@ function importExcel() {
 
 function exportExcel() {
   const wp = calcPages(state.sections);
-  const rows = wp.map((s, i) => ({
-    '#': i+1, 'Stato': s.status, 'Tipo': s.content_type,
-    'Titolo': s.title, 'N.Pagine': s.pages_count,
-    'Pag.Inizio': s.start_page, 'Pag.Fine': s.end_page,
+  const rows = wp.map((s,i) => ({
+    '#': i+1, 'Stato': s.status, 'Tipo': s.content_type, 'Titolo': s.title,
+    'N.Pagine': s.pages_count, 'Pag.Inizio': s.start_page, 'Pag.Fine': s.end_page,
     'Materiali': s.materiali||'Mancanti', 'URL': s.url||'', 'Note': s.notes||'',
   }));
   const ws = XLSX.utils.json_to_sheet(rows);
-  ws['!cols'] = [6,18,16,40,9,12,10,14,40,30].map(w => ({ wch: w }));
+  ws['!cols'] = [6,18,16,40,9,12,10,14,40,30].map(w=>({wch:w}));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Timone');
   XLSX.writeFile(wb, `Timone_${MAGAZINE_NAME.replace(/\s+/g,'_')}.xlsx`);
@@ -776,24 +800,20 @@ function exportExcel() {
 // ============================================================
 
 function getTypeColor(name) {
-  const t = state.contentTypes.find(x => x.name === name);
-  return t ? t.color : '#6B7280';
+  return state.contentTypes.find(x=>x.name===name)?.color || '#6B7280';
 }
 function getStatusColor(name) {
-  const s = state.statuses.find(x => x.name === name);
-  return s ? s.color : '#94A3B8';
+  return state.statuses.find(x=>x.name===name)?.color || '#94A3B8';
 }
 function getMatColor(name) {
-  const m = state.materialiStatuses.find(x => x.name === name);
-  return m ? m.color : '#94A3B8';
+  return state.materialiStatuses.find(x=>x.name===name)?.color || '#94A3B8';
 }
 function isLight(hex) {
-  const c = (hex||'#888').replace('#','');
-  const r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
-  return (r*299 + g*587 + b*114) / 1000 > 150;
+  const c=(hex||'#888').replace('#','');
+  return (parseInt(c.substr(0,2),16)*299+parseInt(c.substr(2,2),16)*587+parseInt(c.substr(4,2),16)*114)/1000>150;
 }
 function escHtml(str) {
-  if (!str) return '';
+  if(!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
