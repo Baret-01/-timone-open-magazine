@@ -172,7 +172,7 @@ nav { display: flex; gap: .2rem; flex: 1; }
 .timone-grid { min-width: 760px; }
 
 /* Row label */
-.timone-row-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: .06em; padding: .25rem 0 .5rem; }
+.timone-row-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: .06em; padding: .25rem 0 .5rem; grid-column: 1 / -1; }
 
 /* Cover rows */
 .timone-cover-row { display: flex; gap: 1rem; margin-bottom: 1rem; align-items: flex-start; }
