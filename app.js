@@ -717,6 +717,7 @@ function openReorderModal() {
     <div id="reorder-list" class="reorder-list">${items}</div>
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn-ghost" onclick="addEmptyToReorder()" style="margin-right:auto">+ Aggiungi</button>
       <button class="btn-primary" onclick="saveTimoneOrder()">Salva ordine</button>
     </div>`;
   document.getElementById('modal-overlay').classList.remove('hidden');
@@ -724,6 +725,25 @@ function openReorderModal() {
   Sortable.create(document.getElementById('reorder-list'), {
     handle: '.reorder-handle', animation: 150, ghostClass: 'sortable-ghost',
   });
+}
+
+async function addEmptyToReorder() {
+  // Salva l'ordine drag corrente prima di inserire
+  const ids = [...document.querySelectorAll('#reorder-list .reorder-item[data-id]')].map(el => el.dataset.id);
+  await Promise.all(ids.map((id, i) => db.from('sections').update({ position: i }).eq('id', id)));
+
+  const newPos = ids.length;
+  const defaultType   = state.contentTypes[0]?.name   || '';
+  const defaultStatus = state.statuses[0]?.name        || '';
+  const defaultMat    = state.materialiStatuses[0]?.name || 'Mancanti';
+  await db.from('sections').insert({
+    title: 'Nuova sezione', content_type: defaultType,
+    pages_count: 2, status: defaultStatus, materiali: defaultMat,
+    url: null, notes: null, color: getTypeColor(defaultType), position: newPos,
+  });
+
+  await loadAll();
+  openReorderModal();
 }
 
 async function saveTimoneOrder() {
