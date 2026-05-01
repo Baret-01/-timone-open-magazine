@@ -62,6 +62,9 @@ const DEFAULT_MATERIALI = [
 // ============================================================
 
 async function init() {
+  state.isReadonly = new URLSearchParams(window.location.search).get('readonly') === '1';
+  if (state.isReadonly) document.body.classList.add('readonly-mode');
+
   document.getElementById('magazine-title').textContent = MAGAZINE_NAME;
   wireNav();
   wireHeaderButtons();
@@ -73,6 +76,10 @@ async function init() {
     db = createClient(SUPABASE_URL, SUPABASE_KEY);
     await loadAll();
     showMainApp();
+    if (state.isReadonly) {
+      state.currentView = 'timone';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    }
     renderCurrentView();
     subscribeRealtime();
   } catch {
@@ -625,11 +632,15 @@ function renderTimone(container) {
     return `<div class="legend-item"><div class="legend-color" style="background:${c}"></div>${escHtml(name)}</div>`;
   }).join('');
 
+  const editingBtns = state.isReadonly ? '' : `
+    <button class="btn-ghost" onclick="openReorderModal()">↕ Riordina</button>
+    <button class="btn-ghost" onclick="copyShareUrl(this)">🔗 Condividi</button>`;
+
   container.innerHTML = `
     <div class="timone-header">
       <h2>Timone — ${escHtml(MAGAZINE_NAME)}</h2>
       <div style="display:flex;gap:.5rem">
-        <button class="btn-ghost" onclick="openReorderModal()">↕ Riordina</button>
+        ${editingBtns}
         <button class="btn-ghost" onclick="window.print()">🖨 Stampa / PDF</button>
       </div>
     </div>
@@ -677,6 +688,15 @@ async function saveTimoneOrder() {
   state.sections = ids.map(id => state.sections.find(s => s.id === id));
   closeModal();
   renderCurrentView();
+}
+
+function copyShareUrl(btn) {
+  const url = window.location.origin + window.location.pathname + '?readonly=1';
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiato!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
 }
 
 function buildSpread(leftSec, lp, rightSec, rp) {
