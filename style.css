@@ -382,10 +382,77 @@ nav { display: flex; gap: .2rem; flex: 1; }
   .dash-card { box-shadow: none; border: 1px solid #E5E7EB; break-inside: avoid; }
 }
 
-/* ===== RESPONSIVE ===== */
+/* ===== RESPONSIVE — tablet ===== */
 @media (max-width: 860px) {
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
-  .settings-grid { grid-template-columns: 1fr; }
+  .settings-grid, .settings-grid-3 { grid-template-columns: 1fr; }
   .spread-row { grid-template-columns: repeat(2, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+/* ===== RESPONSIVE — mobile portrait ===== */
+@media (max-width: 600px) {
+  /* Header: 2 righe */
+  header {
+    flex-wrap: wrap;
+    height: auto;
+    padding: .45rem .75rem .3rem;
+    gap: .35rem;
+    row-gap: 0;
+  }
+  .header-title {
+    min-width: 0;
+    flex: 1;
+    font-size: .82rem;
+  }
+  #magazine-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+    font-size: .8rem;
+  }
+  .header-actions { flex-shrink: 0; gap: .2rem; }
+  .btn-secondary { font-size: .72rem; padding: .22rem .42rem; }
+  /* Nav va a capo sotto, occupa tutta la larghezza */
+  nav {
+    order: 3;
+    width: 100%;
+    justify-content: space-around;
+    border-top: 1px solid rgba(255,255,255,.12);
+    padding-top: .3rem;
+    margin-top: .15rem;
+    padding-bottom: .1rem;
+  }
+  .nav-btn {
+    flex: 1;
+    text-align: center;
+    font-size: .7rem;
+    padding: .28rem .2rem;
+  }
+
+  /* Main */
+  #main-content { padding: .75rem .65rem; }
+
+  /* Lista — tabella scrollabile */
+  .table-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .section-table { min-width: 640px; }
+  .lista-header h2 { font-size: .95rem; }
+
+  /* Timone */
+  .timone-grid { min-width: 0 !important; }
+  .spread-row { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  .timone-wrapper { padding: .75rem .6rem; }
+  .cover-single { width: 75px; }
+  .page-num { font-size: .55rem; }
+  .page-type-lbl { font-size: .55rem; }
+  .page-title-lbl { font-size: .62rem; -webkit-line-clamp: 3; }
+
+  /* Dashboard */
+  .dashboard-grid { grid-template-columns: 1fr; }
+
+  /* Modal */
+  #modal-box { padding: 1.25rem 1rem; }
+  .color-palette { grid-template-columns: repeat(7, 1fr); }
+  .color-swatch { width: 100%; aspect-ratio: 1; }
 }

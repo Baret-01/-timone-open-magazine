@@ -275,6 +275,7 @@ function renderLista(container) {
       <span class="pc-total">📄 Totale pagine: <strong>${tot}</strong></span>
       ${badge}
     </div>
+    <div class="table-scroll-wrap">
     <table class="section-table">
       <thead><tr>
         <th style="width:28px"></th>
@@ -290,7 +291,8 @@ function renderLista(container) {
         <th style="width:34px"></th>
       </tr></thead>
       <tbody id="sections-tbody">${rows}</tbody>
-    </table>`;
+    </table>
+    </div>`;
 
   if (state.sections.length) initSortable();
 }
