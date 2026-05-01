@@ -212,26 +212,46 @@ nav { display: flex; gap: .2rem; flex: 1; }
 .timone-header h2 { font-size: 1.15rem; }
 
 .timone-wrapper { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow-x: auto; }
-.timone-grid { min-width: 1000px; }
 
-/* Row label */
-.timone-row-label { font-size: .68rem; font-weight: 700; text-transform: uppercase; color: #9CA3AF; letter-spacing: .06em; padding: .25rem 0 .5rem; grid-column: 1 / -1; }
+/* Grid di sezioni — 4 colonne, ogni blocco span N */
+.timone-sections {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .85rem;
+  min-width: 600px;
+}
 
-/* Cover rows — cover p.1 sinistra, IV copertina destra */
-.timone-cover-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
-.cover-single { border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.18); width: 100px; }
-.cover-page { width: 100px; height: calc(100px * 1.414); padding: .6rem .5rem; display: flex; flex-direction: column; gap: .25rem; background: #1a1a2e; color: #fff; }
+/* Blocco sezione — drag-and-drop unit */
+.section-block {
+  display: flex;
+  flex-direction: column;
+  gap: .3rem;
+}
 
-/* Spread rows — 4 spreads per row */
-.spread-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .9rem; margin-bottom: .9rem; }
+.section-block-header {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .22rem .45rem;
+  border-radius: 5px;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  overflow: hidden;
+  user-select: none;
+}
+.timone-drag-handle { cursor: grab; flex-shrink: 0; font-size: 1rem; opacity: .75; }
+.timone-drag-handle:active { cursor: grabbing; }
 
-/* Each spread = left page + fold line + right page */
-.spread { display: flex; flex-direction: column; transition: transform .1s, box-shadow .1s; }
-.spread:hover { transform: translateY(-2px); }
-.spread:hover .spread-pages { box-shadow: 0 5px 16px rgba(0,0,0,.18); }
-.spread.empty-spread .spread-pages { box-shadow: none; border: 2px dashed #E5E7EB; background: #F8F9FA; border-radius: 6px; }
-.spread.empty-spread .page-half { background: transparent; }
+.section-block-type { flex-shrink: 0; font-size: .6rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; opacity: .85; white-space: nowrap; }
+.section-block-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .68rem; }
+.section-block-pages { flex-shrink: 0; font-size: .62rem; opacity: .75; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
+/* Sub-spreads orizzontali all'interno del blocco */
+.section-block-spreads { display: flex; gap: .2rem; }
+.section-sub-spread { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+/* Spread visivo: left page + fold line + right page */
 .spread-pages {
   display: grid;
   grid-template-columns: 1fr 2px 1fr;
@@ -241,6 +261,7 @@ nav { display: flex; gap: .2rem; flex: 1; }
 }
 .spread-nums { display: flex; justify-content: space-around; padding-top: .35rem; }
 .page-num-below { font-size: 1rem; font-weight: 800; color: #374151; font-variant-numeric: tabular-nums; }
+.page-num-empty { color: #C8CDD5 !important; }
 
 .page-half {
   aspect-ratio: 1 / 1.414;
@@ -249,6 +270,11 @@ nav { display: flex; gap: .2rem; flex: 1; }
   display: flex;
   flex-direction: column;
   gap: .15rem;
+}
+/* Pagina vuota (sezione con numero dispari di pagine) */
+.page-half-empty {
+  background: #F0F2F5 !important;
+  border: 2px dashed #CBD5E1 !important;
 }
 
 .fold-line {
@@ -264,9 +290,6 @@ nav { display: flex; gap: .2rem; flex: 1; }
 .page-type-lbl { font-size: .78rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; opacity: .85; }
 .page-title-lbl { font-size: .92rem; font-weight: 600; line-height: 1.25; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; margin-top: .25rem; }
 .page-empty-lbl { font-size: .7rem; color: #D1D5DB; align-self: center; margin: auto; }
-
-/* Bottom cover row */
-.timone-bottom-row { display: flex; justify-content: flex-end; margin-top: .5rem; }
 
 /* Legend */
 .timone-legend { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #F3F4F6; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
@@ -375,7 +398,7 @@ nav { display: flex; gap: .2rem; flex: 1; }
   /* Nascondi tutta la UI */
   header, nav, .header-actions, #modal-overlay,
   .timone-header button, .timone-legend,
-  .lista-header button, .drag-handle,
+  .lista-header button, .drag-handle, .timone-drag-handle,
   .page-counter-bar, .btn-icon { display: none !important; }
 
   body { background: #fff; }
@@ -386,35 +409,26 @@ nav { display: flex; gap: .2rem; flex: 1; }
   .timone-header { margin-bottom: .6rem; }
   .timone-header h2 { font-size: 1rem; }
 
-  .timone-grid {
+  .timone-sections {
+    grid-template-columns: repeat(4, 1fr) !important;
     min-width: 0 !important;
     width: 100%;
+    gap: .4rem;
   }
 
-  /* Cover row compatta */
-  .timone-cover-row { margin-bottom: .6rem; break-inside: avoid; }
-  .cover-single { width: 60px; }
-
-  /* 4 spread per riga, nessuna riga tagliata */
-  .spread-row {
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: .35rem;
-    margin-bottom: .5rem;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-  .spread { break-inside: avoid; }
+  /* Ogni blocco sezione non si taglia a metà */
+  .section-block { break-inside: avoid; page-break-inside: avoid; }
+  .section-block-header { display: none; } /* nasconde UI drag in stampa */
+  .section-block-spreads { gap: .15rem; }
   .spread-pages { box-shadow: none !important; border: 1px solid rgba(0,0,0,.15); }
 
-  /* Testo un pelo più piccolo per stare nello spazio */
+  /* Testo più piccolo per stare nello spazio A4 */
   .page-type-lbl { font-size: .6rem; }
   .page-title-lbl { font-size: .72rem; -webkit-line-clamp: 3; }
   .page-num-below { font-size: .78rem; }
-  .timone-row-label { font-size: .6rem; padding-bottom: .25rem; }
 
   /* Stampa colori */
-  .page-half,
-  .cover-page { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page-half { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
   /* Lista (se si stampa dalla lista) */
   .table-scroll-wrap { overflow: visible; }
@@ -433,15 +447,20 @@ nav { display: flex; gap: .2rem; flex: 1; }
   .dashboard-grid { grid-template-columns: 1fr; }
 }
 
-/* Portrait: 2 spread per riga nel timone */
+/* Portrait: 2 colonne nel timone, ogni blocco max 1 colonna */
 @media (max-width: 860px) and (orientation: portrait) {
-  .spread-row { grid-template-columns: repeat(2, 1fr); }
+  .timone-sections {
+    grid-template-columns: repeat(2, 1fr);
+    min-width: 0;
+  }
+  .section-block { grid-column: span 1 !important; }
+  .section-block-spreads { flex-wrap: wrap; }
+  .section-sub-spread { flex: 0 0 calc(50% - .1rem); max-width: calc(50% - .1rem); }
 }
 
-/* Landscape smartphone: timone a 4 spread senza overflow */
+/* Landscape smartphone: 4 colonne, no overflow */
 @media (max-width: 932px) and (orientation: landscape) {
-  .timone-grid { min-width: 0 !important; width: 100%; }
-  .spread-row { grid-template-columns: repeat(4, 1fr) !important; gap: .5rem; }
+  .timone-sections { min-width: 0 !important; width: 100%; gap: .5rem; }
   .timone-wrapper { overflow-x: hidden; }
 }
 
@@ -576,12 +595,12 @@ nav { display: flex; gap: .2rem; flex: 1; }
   }
 
   /* Timone */
-  .timone-grid { min-width: 0 !important; }
-  .spread-row { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
+  .timone-sections { min-width: 0 !important; gap: .5rem; }
   .timone-wrapper { padding: .75rem .6rem; }
-  .cover-single { width: 75px; }
+  .section-block-header { padding: .18rem .35rem; font-size: .62rem; }
   .page-type-lbl { font-size: .55rem; }
   .page-title-lbl { font-size: .62rem; -webkit-line-clamp: 3; }
+  .page-num-below { font-size: .8rem; }
 
   /* Dashboard */
   .dashboard-grid { grid-template-columns: 1fr; }
