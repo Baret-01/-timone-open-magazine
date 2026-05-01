@@ -434,10 +434,67 @@ nav { display: flex; gap: .2rem; flex: 1; }
   /* Main */
   #main-content { padding: .75rem .65rem; }
 
-  /* Lista — tabella scrollabile */
-  .table-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  .section-table { min-width: 640px; }
+  /* Lista — card layout a 2 righe */
   .lista-header h2 { font-size: .95rem; }
+  .table-scroll-wrap { overflow: visible; }
+
+  .section-table { min-width: 0 !important; background: transparent; box-shadow: none; border-radius: 0; }
+  .section-table thead { display: none; }
+  .section-table tbody { display: flex; flex-direction: column; gap: .5rem; }
+
+  .section-table tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .25rem;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #E5E7EB;
+    padding: .55rem .65rem;
+  }
+  .section-table tr.sortable-ghost { opacity: .4; }
+  .section-table tr:hover td { background: transparent !important; }
+  .section-table td {
+    display: flex;
+    align-items: center;
+    border-bottom: none !important;
+    padding: .1rem .1rem;
+    font-size: .82rem;
+  }
+
+  /* ---- Riga 1: drag · stato · tipo · titolo ---- */
+  .section-table td:nth-child(1) { order: 1; }          /* drag */
+  .section-table td:nth-child(2) { display: none; }      /* # nascosto */
+  .section-table td:nth-child(3) { order: 2; }           /* stato */
+  .section-table td:nth-child(4) { order: 3; }           /* tipo */
+  .section-table td:nth-child(5) { order: 4; flex: 1; min-width: 0; } /* titolo */
+  .section-table td:nth-child(5) .cell-val { font-weight: 600; white-space: normal; }
+  .section-table td:nth-child(5) .cell-notes { display: none; }
+
+  /* Separatore tra riga 1 e riga 2 */
+  .section-table tr::after {
+    content: '';
+    display: block;
+    width: 100%;
+    order: 5;
+    height: 1px;
+    background: #F3F4F6;
+    margin: .2rem 0 .1rem;
+  }
+
+  /* ---- Riga 2: materiali · pp.X–Y · url · elimina ---- */
+  .section-table td:nth-child(6) { order: 6; }           /* materiali */
+  .section-table td:nth-child(7) { order: 9; }           /* url */
+  .section-table td:nth-child(8) { display: none; }      /* n.pag (ridondante con range) */
+  .section-table td:nth-child(9) { order: 7; font-size: .78rem; color: #6B7280; } /* p.inizio */
+  .section-table td:nth-child(9)::before { content: 'pp.'; font-size: .65rem; color: #9CA3AF; margin-right: .2rem; }
+  .section-table td:nth-child(10) { order: 8; font-size: .78rem; color: #6B7280; } /* p.fine */
+  .section-table td:nth-child(10)::before { content: '–'; color: #9CA3AF; margin: 0 .15rem; }
+  .section-table td:nth-child(11) { order: 10; margin-left: auto; } /* elimina */
+
+  /* Selects più compatti nella card */
+  .section-table .status-sel,
+  .section-table .type-sel { max-width: 96px; font-size: .72rem; padding: .18rem .4rem; }
 
   /* Timone */
   .timone-grid { min-width: 0 !important; }
