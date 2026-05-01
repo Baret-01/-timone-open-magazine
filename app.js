@@ -16,24 +16,24 @@ let state = {
 };
 
 const DEFAULT_TYPES = [
-  { name: 'COVER',        color: '#1a1a2e' },
-  { name: 'ADV',          color: '#F97316' },
-  { name: 'REDAZIONALE',  color: '#3B82F6' },
-  { name: 'CORPORATE',    color: '#8B5CF6' },
-  { name: 'ATTUALITA',    color: '#EF4444' },
-  { name: 'RETAIL',       color: '#10B981' },
-  { name: 'LIFESTYLE',    color: '#EC4899' },
-  { name: 'CATALOGO',     color: '#64748B' },
+  { name: 'COVER',        color: '#344055' },
+  { name: 'ADV',          color: '#D4A088' },
+  { name: 'REDAZIONALE',  color: '#7BAFC8' },
+  { name: 'CORPORATE',    color: '#A090C0' },
+  { name: 'ATTUALITA',    color: '#D07878' },
+  { name: 'RETAIL',       color: '#7AB89A' },
+  { name: 'LIFESTYLE',    color: '#D4889A' },
+  { name: 'CATALOGO',     color: '#8AA0AC' },
 ];
 const DEFAULT_STATUSES = [
-  { name: 'Da fare',        color: '#94A3B8' },
-  { name: 'Da richiedere',  color: '#C084FC' },
-  { name: 'Richiesto',      color: '#60A5FA' },
-  { name: 'Attendiamo',     color: '#FB923C' },
-  { name: 'In lavorazione', color: '#FBBF24' },
-  { name: 'Impaginato',     color: '#34D399' },
-  { name: 'Approvato',      color: '#10B981' },
-  { name: 'Consegnato',     color: '#047857' },
+  { name: 'Da fare',        color: '#B0BEC5' },
+  { name: 'Da richiedere',  color: '#B8A8D8' },
+  { name: 'Richiesto',      color: '#88B8D8' },
+  { name: 'Attendiamo',     color: '#D4A878' },
+  { name: 'In lavorazione', color: '#D4C060' },
+  { name: 'Impaginato',     color: '#88C8A0' },
+  { name: 'Approvato',      color: '#60A880' },
+  { name: 'Consegnato',     color: '#3D8860' },
 ];
 const COLOR_PALETTE = [
   // Neutri
@@ -51,10 +51,10 @@ const COLOR_PALETTE = [
 ];
 
 const DEFAULT_MATERIALI = [
-  { name: 'Mancanti',  color: '#EF4444' },
-  { name: 'In arrivo', color: '#F59E0B' },
-  { name: 'Ricevuti',  color: '#3B82F6' },
-  { name: 'OK',        color: '#10B981' },
+  { name: 'Mancanti',  color: '#D48888' },
+  { name: 'In arrivo', color: '#D4A870' },
+  { name: 'Ricevuti',  color: '#80A8D0' },
+  { name: 'Ok',        color: '#80C0A0' },
 ];
 
 // ============================================================

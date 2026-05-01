@@ -141,6 +141,12 @@ nav { display: flex; gap: .2rem; flex: 1; }
 }
 .cell-edit:hover { background: #F0F4FF !important; }
 .cell-val { display: block; }
+.section-table td:nth-child(5) .cell-val {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: .95rem;
+  letter-spacing: .015em;
+  color: #1a1a2e;
+}
 .cell-notes { display: block; font-size: .75rem; color: #9CA3AF; margin-top: .1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
 .num-cell { text-align: center; }
 .url-cell { text-align: center; }
