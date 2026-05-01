@@ -435,6 +435,12 @@ nav { display: flex; gap: .2rem; flex: 1; }
   .dash-card { box-shadow: none; border: 1px solid #E5E7EB; break-inside: avoid; }
 }
 
+/* ===== READONLY MODE ===== */
+.readonly-mode nav,
+.readonly-mode .header-actions { display: none !important; }
+.readonly-mode header { justify-content: center; }
+.readonly-mode .header-title { min-width: 0; }
+
 /* ===== RESPONSIVE — tablet ===== */
 @media (max-width: 860px) {
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
