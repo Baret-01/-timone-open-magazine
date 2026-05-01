@@ -274,7 +274,10 @@ function renderLista(container) {
         <td class="page-num-cell">${s.start_page}</td>
         <td class="page-num-cell">${s.end_page}</td>
         <td>
-          <button class="btn-icon" onclick="confirmDelete('${s.id}','${escHtml(s.title).replace(/'/g,"\\'")}')">🗑</button>
+          <div class="row-actions">
+            <button class="btn-icon btn-insert" onclick="openAddModal(${i})" title="Inserisci sezione dopo">+</button>
+            <button class="btn-icon" onclick="confirmDelete('${s.id}','${escHtml(s.title).replace(/'/g,"\\'")}')">🗑</button>
+          </div>
         </td>
       </tr>`;
     }).join('');
@@ -283,7 +286,10 @@ function renderLista(container) {
   container.innerHTML = `
     <div class="lista-header">
       <h2>Sezioni — ${escHtml(MAGAZINE_NAME)}</h2>
-      <button class="btn-primary" onclick="openAddModal()">+ Aggiungi sezione</button>
+      <div style="display:flex;gap:.5rem;align-items:center">
+        <button class="btn-ghost" onclick="openAddModal(-1)" title="Inserisci in cima alla lista">↑ In cima</button>
+        <button class="btn-primary" onclick="openAddModal()">+ Aggiungi</button>
+      </div>
     </div>
     <div class="page-counter-bar">
       <span class="pc-total">📄 Totale pagine: <strong>${tot}</strong></span>
@@ -391,16 +397,23 @@ function initSortable() {
 //  ADD MODAL (solo per nuove sezioni)
 // ============================================================
 
-function openAddModal() {
+// insertAfterIdx: undefined/null = accoda in fondo, -1 = in cima, N = dopo la sezione all'indice N
+function openAddModal(insertAfterIdx) {
+  const idx = (insertAfterIdx !== undefined && insertAfterIdx !== null) ? insertAfterIdx : null;
   const typeOpts = state.contentTypes.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
   const statOpts = state.statuses.map(t => `<option value="${escHtml(t.name)}">${escHtml(t.name)}</option>`).join('');
   const matOpts  = state.materialiStatuses.map(m => `<option value="${escHtml(m.name)}">${escHtml(m.name)}</option>`).join('');
 
+  let posHint = '';
+  if (idx === -1)       posHint = `<span class="insert-pos-hint">↑ In cima</span>`;
+  else if (idx !== null) posHint = `<span class="insert-pos-hint">↓ Dopo: <em>${escHtml(state.sections[idx].title || '—')}</em></span>`;
+
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-title">
-      <span>➕ Nuova sezione</span>
+      <span>➕ Nuova sezione ${posHint}</span>
       <button class="btn-icon" onclick="closeModal()">✕</button>
     </div>
+    <input type="hidden" id="f-insert-after" value="${idx !== null ? idx : ''}">
     <div class="form-grid">
       <div class="form-group">
         <label>Titolo *</label>
@@ -426,19 +439,43 @@ function openAddModal() {
 }
 
 async function saveNewSection() {
-  const title    = document.getElementById('f-title').value.trim();
-  const type     = document.getElementById('f-type').value;
-  const pages    = parseInt(document.getElementById('f-pages').value, 10);
-  const status   = document.getElementById('f-status').value;
+  const title     = document.getElementById('f-title').value.trim();
+  const type      = document.getElementById('f-type').value;
+  const pages     = parseInt(document.getElementById('f-pages').value, 10);
+  const status    = document.getElementById('f-status').value;
   const materiali = document.getElementById('f-materiali').value;
-  const url      = document.getElementById('f-url').value.trim() || null;
-  const notes    = document.getElementById('f-notes').value.trim() || null;
-  if (!title)          { alert('Inserisci il titolo.'); return; }
+  const url       = document.getElementById('f-url').value.trim() || null;
+  const notes     = document.getElementById('f-notes').value.trim() || null;
+  if (!title)            { alert('Inserisci il titolo.'); return; }
   if (!pages || pages < 1) { alert('Numero pagine non valido.'); return; }
-  const maxPos = state.sections.length ? Math.max(...state.sections.map(s => s.position)) + 1 : 0;
+
+  const insertVal = document.getElementById('f-insert-after').value;
+  const insertAfterIdx = insertVal === '' ? null : parseInt(insertVal, 10);
+
+  let newPos;
+  if (insertAfterIdx === null) {
+    // Accoda in fondo
+    newPos = state.sections.length ? Math.max(...state.sections.map(s => s.position)) + 1 : 0;
+  } else if (insertAfterIdx === -1) {
+    // In cima: scala tutte le sezioni di 1
+    await Promise.all(state.sections.map(s =>
+      db.from('sections').update({ position: s.position + 1 }).eq('id', s.id)
+    ));
+    newPos = 0;
+  } else {
+    // Dopo sezione all'indice insertAfterIdx: scala le successive di 1
+    const toShift = state.sections.slice(insertAfterIdx + 1);
+    if (toShift.length) {
+      await Promise.all(toShift.map(s =>
+        db.from('sections').update({ position: s.position + 1 }).eq('id', s.id)
+      ));
+    }
+    newPos = state.sections[insertAfterIdx].position + 1;
+  }
+
   await db.from('sections').insert({
     title, content_type: type, pages_count: pages, status, materiali, url, notes,
-    color: getTypeColor(type), position: maxPos,
+    color: getTypeColor(type), position: newPos,
   });
   closeModal();
   await loadAll(); renderCurrentView();
