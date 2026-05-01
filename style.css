@@ -30,20 +30,23 @@ header {
   min-width: 200px;
 }
 .header-icon { font-size: 1.2rem; }
-nav { display: flex; gap: .2rem; flex: 1; }
+nav { display: flex; gap: 0; flex: 1; }
 .nav-btn {
   background: transparent;
   border: none;
-  color: #aab0c0;
-  padding: .35rem .75rem;
-  border-radius: 6px;
+  border-bottom: 2px solid transparent;
+  color: #7a84a0;
+  padding: 0 .95rem;
+  height: 52px;
+  border-radius: 0;
   font-size: .82rem;
   font-weight: 500;
-  transition: background .15s, color .15s;
+  letter-spacing: .01em;
   white-space: nowrap;
+  transition: color .15s, border-color .15s;
 }
-.nav-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
-.nav-btn.active { background: rgba(255,255,255,.15); color: #fff; }
+.nav-btn:hover { background: transparent; color: #c8cedf; }
+.nav-btn.active { color: #fff; border-bottom-color: #fff; }
 .header-actions { display: flex; gap: .4rem; flex-shrink: 0; }
 
 /* ===== BUTTONS ===== */
@@ -532,7 +535,8 @@ nav { display: flex; gap: .2rem; flex: 1; }
     padding: .28rem 0 .18rem;
     margin-top: .1rem;
   }
-  .nav-btn { flex: 1; text-align: center; font-size: .73rem; padding: .28rem .15rem; }
+  .nav-btn { flex: 1; text-align: center; font-size: .73rem; padding: 0; height: 38px; border-bottom: none; border-top: 2px solid transparent; }
+  .nav-btn.active { border-top-color: #fff; border-bottom-color: transparent; }
 }
 
 /* ===== RESPONSIVE — mobile portrait ===== */
