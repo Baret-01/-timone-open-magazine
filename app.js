@@ -705,6 +705,7 @@ function openReorderModal() {
       <span class="reorder-type" style="background:${tc};color:${tl}">${escHtml(s.content_type)}</span>
       <span class="reorder-title">${escHtml(s.title)}</span>
       <span class="reorder-pages">${pageRange} · ${s.pages_count}p</span>
+      <button class="btn-icon reorder-delete" onclick="reorderDeleteConfirm('${s.id}','${escHtml(s.title).replace(/'/g,"\\'")}',this)" title="Elimina">🗑</button>
     </div>`;
   }).join('');
 
@@ -725,6 +726,23 @@ function openReorderModal() {
   Sortable.create(document.getElementById('reorder-list'), {
     handle: '.reorder-handle', animation: 150, ghostClass: 'sortable-ghost',
   });
+}
+
+function reorderDeleteConfirm(id, title, btn) {
+  const item = btn.closest('.reorder-item');
+  item.setAttribute('draggable', 'false');
+  item.style.background = '#FEF2F2';
+  item.style.borderColor = '#FECACA';
+  item.innerHTML = `
+    <span style="flex:1;font-size:.83rem;color:#DC2626">Eliminare <strong>${escHtml(title)}</strong>?</span>
+    <button class="btn-danger" style="font-size:.78rem;padding:.25rem .65rem" onclick="doReorderDelete('${id}')">Sì, elimina</button>
+    <button class="btn-ghost" style="font-size:.78rem;padding:.25rem .65rem" onclick="openReorderModal()">No</button>`;
+}
+
+async function doReorderDelete(id) {
+  await db.from('sections').delete().eq('id', id);
+  await loadAll();
+  openReorderModal();
 }
 
 async function addEmptyToReorder() {

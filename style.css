@@ -258,6 +258,8 @@ nav { display: flex; gap: .2rem; flex: 1; }
 .reorder-type { font-family: 'Space Grotesk', sans-serif; font-size: .65rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: .15rem .4rem; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }
 .reorder-title { flex: 1; font-size: .88rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reorder-pages { font-size: .75rem; color: #9CA3AF; flex-shrink: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.reorder-delete { opacity: 0; transition: opacity .15s; flex-shrink: 0; font-size: .85rem; }
+.reorder-item:hover .reorder-delete { opacity: 1; }
 
 /* ===== TIMONE ===== */
 .timone-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.1rem; flex-wrap: wrap; gap: .75rem; }
