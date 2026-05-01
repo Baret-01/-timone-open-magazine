@@ -220,7 +220,7 @@ nav { display: flex; gap: .2rem; flex: 1; }
 /* Cover rows — cover p.1 sinistra, IV copertina destra */
 .timone-cover-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
 .cover-single { border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.18); width: 100px; }
-.cover-page { aspect-ratio: 1 / 1.414; padding: .6rem .5rem; display: flex; flex-direction: column; gap: .25rem; background: #1a1a2e; color: #fff; }
+.cover-page { width: 100px; height: calc(100px * 1.414); padding: .6rem .5rem; display: flex; flex-direction: column; gap: .25rem; background: #1a1a2e; color: #fff; }
 
 /* Spread rows — 4 spreads per row */
 .spread-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .9rem; margin-bottom: .9rem; }
@@ -232,18 +232,24 @@ nav { display: flex; gap: .2rem; flex: 1; }
 .spread.empty-spread .spread-pages { box-shadow: none; border: 2px dashed #E5E7EB; background: #F8F9FA; border-radius: 6px; }
 .spread.empty-spread .page-half { background: transparent; }
 
-.spread-pages { display: flex; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.spread-pages {
+  display: flex;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  aspect-ratio: 2 / 1.414; /* bifoglio = 2 pagine A4 portrait affiancate */
+  width: 100%;
+}
 .spread-nums { display: flex; justify-content: space-around; padding-top: .35rem; }
 .page-num-below { font-size: 1rem; font-weight: 800; color: #374151; font-variant-numeric: tabular-nums; }
 
 .page-half {
   flex: 1;
-  aspect-ratio: 1 / 1.414;
+  min-width: 0;
   padding: .5rem .45rem;
   display: flex;
   flex-direction: column;
   gap: .15rem;
-  min-height: 0;
 }
 
 .fold-line {
