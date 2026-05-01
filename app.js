@@ -5,6 +5,9 @@
 const CONFIG_KEY    = 'open_timone_config';
 const MAGAZINE_NAME = 'OPEN Magazine 01-2026';
 
+const SUPABASE_URL = 'https://bofntouxakshosdtgdfj.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_fn-3Mbq0vrNm2yZv1_EtZg_ubfAt6vu';
+
 let db = null;
 let realtimeChannel = null;
 let state = {
@@ -65,17 +68,15 @@ async function init() {
   document.getElementById('modal-overlay').addEventListener('click', e => {
     if (e.target === document.getElementById('modal-overlay')) closeModal();
   });
-  const config = getConfig();
-  if (!config) { showConfigScreen(); return; }
   try {
     const { createClient } = window.supabase;
-    db = createClient(config.url, config.key);
+    db = createClient(SUPABASE_URL, SUPABASE_KEY);
     await loadAll();
     showMainApp();
     renderCurrentView();
     subscribeRealtime();
   } catch {
-    showConfigScreen('Errore di connessione. Controlla URL e chiave Supabase.');
+    showConfigScreen('Errore di connessione al database.');
   }
 }
 
