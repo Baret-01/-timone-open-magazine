@@ -286,10 +286,6 @@ function renderLista(container) {
   container.innerHTML = `
     <div class="lista-header">
       <h2>Sezioni — ${escHtml(MAGAZINE_NAME)}</h2>
-      <div style="display:flex;gap:.5rem;align-items:center">
-        <button class="btn-ghost" onclick="openAddModal(-1)" title="Inserisci in cima alla lista">↑ In cima</button>
-        <button class="btn-primary" onclick="openAddModal()">+ Aggiungi</button>
-      </div>
     </div>
     <div class="page-counter-bar">
       <span class="pc-total">📄 Totale pagine: <strong>${tot}</strong></span>
@@ -311,6 +307,13 @@ function renderLista(container) {
         <th style="width:34px"></th>
       </tr></thead>
       <tbody id="sections-tbody">${rows}</tbody>
+      <tfoot>
+        <tr>
+          <td colspan="11" class="add-row-ghost" onclick="openAddModal()">
+            <span class="add-row-plus">＋</span> Aggiungi sezione
+          </td>
+        </tr>
+      </tfoot>
     </table>
     </div>`;
 
