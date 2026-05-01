@@ -207,6 +207,15 @@ nav { display: flex; gap: .2rem; flex: 1; }
 .totale-big { font-size: 2rem; font-weight: 800; color: #1a1a2e; }
 .totale-label { font-size: .82rem; color: #6B7280; margin-top: .1rem; }
 
+/* ===== RIORDINA MODAL ===== */
+.reorder-list { display: flex; flex-direction: column; gap: .35rem; max-height: 60vh; overflow-y: auto; margin-bottom: .25rem; }
+.reorder-item { display: flex; align-items: center; gap: .6rem; background: #fff; border: 1px solid #E5E7EB; border-radius: 8px; padding: .55rem .75rem; user-select: none; }
+.reorder-handle { cursor: grab; color: #9CA3AF; font-size: 1.1rem; flex-shrink: 0; }
+.reorder-handle:active { cursor: grabbing; }
+.reorder-type { font-size: .65rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: .15rem .4rem; border-radius: 4px; flex-shrink: 0; white-space: nowrap; }
+.reorder-title { flex: 1; font-size: .88rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reorder-pages { font-size: .75rem; color: #9CA3AF; flex-shrink: 0; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 /* ===== TIMONE ===== */
 .timone-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.1rem; flex-wrap: wrap; gap: .75rem; }
 .timone-header h2 { font-size: 1.15rem; }
@@ -425,6 +434,12 @@ nav { display: flex; gap: .2rem; flex: 1; }
   /* Dashboard */
   .dash-card { box-shadow: none; border: 1px solid #E5E7EB; break-inside: avoid; }
 }
+
+/* ===== READONLY MODE ===== */
+.readonly-mode nav,
+.readonly-mode .header-actions { display: none !important; }
+.readonly-mode header { justify-content: center; }
+.readonly-mode .header-title { min-width: 0; }
 
 /* ===== RESPONSIVE — tablet ===== */
 @media (max-width: 860px) {

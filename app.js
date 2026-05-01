@@ -62,6 +62,9 @@ const DEFAULT_MATERIALI = [
 // ============================================================
 
 async function init() {
+  state.isReadonly = new URLSearchParams(window.location.search).get('readonly') === '1';
+  if (state.isReadonly) document.body.classList.add('readonly-mode');
+
   document.getElementById('magazine-title').textContent = MAGAZINE_NAME;
   wireNav();
   wireHeaderButtons();
@@ -73,6 +76,10 @@ async function init() {
     db = createClient(SUPABASE_URL, SUPABASE_KEY);
     await loadAll();
     showMainApp();
+    if (state.isReadonly) {
+      state.currentView = 'timone';
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    }
     renderCurrentView();
     subscribeRealtime();
   } catch {
@@ -625,15 +632,71 @@ function renderTimone(container) {
     return `<div class="legend-item"><div class="legend-color" style="background:${c}"></div>${escHtml(name)}</div>`;
   }).join('');
 
+  const editingBtns = state.isReadonly ? '' : `
+    <button class="btn-ghost" onclick="openReorderModal()">↕ Riordina</button>
+    <button class="btn-ghost" onclick="copyShareUrl(this)">🔗 Condividi</button>`;
+
   container.innerHTML = `
     <div class="timone-header">
       <h2>Timone — ${escHtml(MAGAZINE_NAME)}</h2>
-      <button class="btn-ghost" onclick="window.print()">🖨 Stampa / PDF</button>
+      <div style="display:flex;gap:.5rem">
+        ${editingBtns}
+        <button class="btn-ghost" onclick="window.print()">🖨 Stampa / PDF</button>
+      </div>
     </div>
     <div class="timone-wrapper">
       <div class="timone-grid">${gridHtml}</div>
       ${legendItems ? `<div class="timone-legend"><span class="legend-label">Legenda:</span>${legendItems}</div>` : ''}
     </div>`;
+}
+
+function openReorderModal() {
+  const wp = calcPages(state.sections);
+  const items = wp.map(s => {
+    const tc = getTypeColor(s.content_type);
+    const tl = isLight(tc) ? '#1a1a2e' : '#fff';
+    const pageRange = s.pages_count === 1 ? `p. ${s.start_page}` : `pp. ${s.start_page}–${s.end_page}`;
+    return `<div class="reorder-item" data-id="${s.id}">
+      <span class="drag-handle reorder-handle">⠿</span>
+      <span class="reorder-type" style="background:${tc};color:${tl}">${escHtml(s.content_type)}</span>
+      <span class="reorder-title">${escHtml(s.title)}</span>
+      <span class="reorder-pages">${pageRange} · ${s.pages_count}p</span>
+    </div>`;
+  }).join('');
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-title">
+      <span>↕ Riordina sezioni</span>
+      <button class="btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <p style="font-size:.82rem;color:#6B7280;margin:.1rem 0 .85rem">Trascina le righe per cambiare l'ordine nel timone.</p>
+    <div id="reorder-list" class="reorder-list">${items}</div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn-primary" onclick="saveTimoneOrder()">Salva ordine</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+
+  Sortable.create(document.getElementById('reorder-list'), {
+    handle: '.reorder-handle', animation: 150, ghostClass: 'sortable-ghost',
+  });
+}
+
+async function saveTimoneOrder() {
+  const ids = [...document.querySelectorAll('#reorder-list .reorder-item[data-id]')].map(el => el.dataset.id);
+  await Promise.all(ids.map((id, i) => db.from('sections').update({ position: i }).eq('id', id)));
+  state.sections = ids.map(id => state.sections.find(s => s.id === id));
+  closeModal();
+  renderCurrentView();
+}
+
+function copyShareUrl(btn) {
+  const url = window.location.origin + window.location.pathname + '?readonly=1';
+  navigator.clipboard.writeText(url).then(() => {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiato!';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
 }
 
 function buildSpread(leftSec, lp, rightSec, rp) {
