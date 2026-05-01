@@ -3,7 +3,7 @@
 html { font-size: 15px; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F0F2F5; color: #1a1a2e; min-height: 100vh; }
 .hidden { display: none !important; }
-button { cursor: pointer; font-family: inherit; }
+button { cursor: pointer; font-family: inherit; touch-action: manipulation; }
 input, select, textarea { font-family: inherit; }
 
 /* ===== HEADER ===== */
@@ -536,6 +536,21 @@ nav { display: flex; gap: .2rem; flex: 1; }
   /* Selects più compatti nella card */
   .section-table .status-sel,
   .section-table .type-sel { max-width: 96px; font-size: .72rem; padding: .18rem .4rem; }
+
+  /* Bottone elimina — target grande e visibile */
+  .section-table td:nth-child(11) { order: 10; margin-left: auto; }
+  .section-table td:nth-child(11) .btn-icon {
+    background: #FEE2E2;
+    color: #DC2626;
+    border-radius: 8px;
+    padding: .55rem .75rem;
+    font-size: 1.1rem;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   /* Timone */
   .timone-grid { min-width: 0 !important; }
