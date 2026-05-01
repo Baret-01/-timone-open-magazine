@@ -557,10 +557,11 @@ function renderTimone(container) {
   const cTC = isLight(cc) ? '#1a1a2e' : '#fff';
   const coverCell = `<div class="cover-single">
     <div class="cover-page" style="background:${cc};color:${cTC}">
-      <div class="page-num">p. 1</div>
       <div class="page-type-lbl">${escHtml(firstSec?.content_type||'COVER')}</div>
       <div class="page-title-lbl">${escHtml(firstSec?.title||'COVER')}</div>
-    </div></div>`;
+    </div>
+    <div class="page-num-below" style="text-align:center">1</div>
+  </div>`;
 
   // IV copertina cell
   let ivCell = '';
@@ -569,10 +570,11 @@ function renderTimone(container) {
     const it = isLight(ic) ? '#1a1a2e' : '#fff';
     ivCell = `<div class="cover-single">
       <div class="cover-page" style="background:${ic};color:${it}">
-        <div class="page-num">p. ${lastSec.end_page}</div>
         <div class="page-type-lbl">${escHtml(lastSec.content_type)}</div>
         <div class="page-title-lbl">${escHtml(lastSec.title)}</div>
-      </div></div>`;
+      </div>
+      <div class="page-num-below" style="text-align:center">${lastSec.end_page}</div>
+    </div>`;
   }
 
   // Spreads (pages 2..displayTotal, skip IV page)
@@ -619,7 +621,6 @@ function renderTimone(container) {
 }
 
 function buildSpread(leftSec, lp, rightSec, rp) {
-  // Colori SEMPRE da getTypeColor, mai dal campo color salvato
   const lc = leftSec  ? getTypeColor(leftSec.content_type)  : '#F3F4F6';
   const rc = rightSec ? getTypeColor(rightSec.content_type) : '#F3F4F6';
   const lt = isLight(lc) ? '#1a1a2e' : '#fff';
@@ -627,14 +628,18 @@ function buildSpread(leftSec, lp, rightSec, rp) {
   const isEmpty = !leftSec && !rightSec;
 
   return `<div class="spread${isEmpty?' empty-spread':''}">
-    <div class="page-half" style="background:${lc};color:${lt}">
-      <div class="page-num">p. ${lp}</div>
-      ${leftSec  ? `<div class="page-type-lbl">${escHtml(leftSec.content_type)}</div><div class="page-title-lbl">${escHtml(leftSec.title)}</div>` : ''}
+    <div class="spread-pages">
+      <div class="page-half" style="background:${lc};color:${lt}">
+        ${leftSec  ? `<div class="page-type-lbl">${escHtml(leftSec.content_type)}</div><div class="page-title-lbl">${escHtml(leftSec.title)}</div>` : ''}
+      </div>
+      <div class="fold-line"></div>
+      <div class="page-half" style="background:${rc};color:${rt}">
+        ${rightSec ? `<div class="page-type-lbl">${escHtml(rightSec.content_type)}</div><div class="page-title-lbl">${escHtml(rightSec.title)}</div>` : ''}
+      </div>
     </div>
-    <div class="fold-line"></div>
-    <div class="page-half" style="background:${rc};color:${rt}">
-      <div class="page-num">p. ${rp}</div>
-      ${rightSec ? `<div class="page-type-lbl">${escHtml(rightSec.content_type)}</div><div class="page-title-lbl">${escHtml(rightSec.title)}</div>` : ''}
+    <div class="spread-nums">
+      <span class="page-num-below">${lp}</span>
+      <span class="page-num-below">${rp}</span>
     </div>
   </div>`;
 }

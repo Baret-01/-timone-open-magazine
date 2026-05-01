@@ -226,10 +226,15 @@ nav { display: flex; gap: .2rem; flex: 1; }
 .spread-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: .9rem; margin-bottom: .9rem; }
 
 /* Each spread = left page + fold line + right page */
-.spread { display: flex; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.12); transition: transform .1s, box-shadow .1s; }
-.spread:hover { transform: translateY(-2px); box-shadow: 0 5px 16px rgba(0,0,0,.18); }
-.spread.empty-spread { box-shadow: none; border: 2px dashed #E5E7EB; background: #F8F9FA; border-radius: 6px; }
+.spread { display: flex; flex-direction: column; transition: transform .1s, box-shadow .1s; }
+.spread:hover { transform: translateY(-2px); }
+.spread:hover .spread-pages { box-shadow: 0 5px 16px rgba(0,0,0,.18); }
+.spread.empty-spread .spread-pages { box-shadow: none; border: 2px dashed #E5E7EB; background: #F8F9FA; border-radius: 6px; }
 .spread.empty-spread .page-half { background: transparent; }
+
+.spread-pages { display: flex; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.spread-nums { display: flex; justify-content: space-around; padding-top: .35rem; }
+.page-num-below { font-size: .75rem; font-weight: 800; color: #6B7280; font-variant-numeric: tabular-nums; }
 
 .page-half {
   flex: 1;
@@ -253,9 +258,8 @@ nav { display: flex; gap: .2rem; flex: 1; }
   );
 }
 
-.page-num { font-size: .62rem; font-weight: 800; opacity: .7; font-variant-numeric: tabular-nums; }
-.page-type-lbl { font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; opacity: .75; margin-top: .1rem; }
-.page-title-lbl { font-size: .72rem; font-weight: 600; line-height: 1.25; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; margin-top: .15rem; }
+.page-type-lbl { font-size: .68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; opacity: .8; }
+.page-title-lbl { font-size: .8rem; font-weight: 600; line-height: 1.25; flex: 1; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; margin-top: .2rem; }
 .page-empty-lbl { font-size: .7rem; color: #D1D5DB; align-self: center; margin: auto; }
 
 /* Bottom cover row */
