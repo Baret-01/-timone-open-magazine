@@ -434,67 +434,55 @@ nav { display: flex; gap: .2rem; flex: 1; }
   .dashboard-grid { grid-template-columns: 1fr; }
 }
 
-/* ===== RESPONSIVE — mobile portrait ===== */
-@media (max-width: 600px) {
-  /* Header: 2 righe */
+/* ===== RESPONSIVE — smartphone header (portrait + landscape) ===== */
+@media (max-width: 768px) {
   header {
     flex-wrap: wrap;
     height: auto;
-    padding: .45rem .75rem .3rem;
-    gap: .35rem;
+    padding: .45rem .85rem .25rem;
+    gap: .4rem;
     row-gap: 0;
   }
-  .header-title {
-    min-width: 0;
-    flex: 1;
-    font-size: .82rem;
-  }
+  .header-title { min-width: 0; flex: 1; }
   #magazine-title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 140px;
-    font-size: .8rem;
+    max-width: 180px;
+    font-size: .82rem;
   }
-  .header-actions { flex-shrink: 0; gap: .2rem; }
-  .btn-secondary { font-size: .72rem; padding: .22rem .42rem; }
-  /* Nav va a capo sotto, occupa tutta la larghezza */
+  .header-actions { flex-shrink: 0; gap: .25rem; }
+  .btn-secondary { font-size: .73rem; padding: .24rem .48rem; }
   nav {
     order: 3;
     width: 100%;
     justify-content: space-around;
     border-top: 1px solid rgba(255,255,255,.12);
-    padding-top: .3rem;
-    margin-top: .15rem;
-    padding-bottom: .1rem;
+    padding: .28rem 0 .18rem;
+    margin-top: .1rem;
   }
-  .nav-btn {
-    flex: 1;
-    text-align: center;
-    font-size: .7rem;
-    padding: .28rem .2rem;
-  }
+  .nav-btn { flex: 1; text-align: center; font-size: .73rem; padding: .28rem .15rem; }
+}
 
-  /* Main */
+/* ===== RESPONSIVE — mobile portrait ===== */
+@media (max-width: 600px) {
   #main-content { padding: .75rem .65rem; }
 
-  /* Lista — card layout a 2 righe */
+  /* Lista — card layout */
   .lista-header h2 { font-size: .95rem; }
   .table-scroll-wrap { overflow: visible; }
-
   .section-table { min-width: 0 !important; background: transparent; box-shadow: none; border-radius: 0; }
   .section-table thead { display: none; }
   .section-table tbody { display: flex; flex-direction: column; gap: .5rem; }
-
   .section-table tr {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: .25rem;
+    gap: .28rem;
     background: #fff;
     border-radius: 10px;
     border: 1px solid #E5E7EB;
-    padding: .55rem .65rem;
+    padding: .6rem .7rem;
   }
   .section-table tr.sortable-ghost { opacity: .4; }
   .section-table tr:hover td { background: transparent !important; }
@@ -502,20 +490,34 @@ nav { display: flex; gap: .2rem; flex: 1; }
     display: flex;
     align-items: center;
     border-bottom: none !important;
-    padding: .1rem .1rem;
+    padding: .08rem .1rem;
     font-size: .82rem;
   }
 
-  /* ---- Riga 1: drag · stato · tipo · titolo ---- */
-  .section-table td:nth-child(1) { order: 1; }          /* drag */
-  .section-table td:nth-child(2) { display: none; }      /* # nascosto */
-  .section-table td:nth-child(3) { order: 2; }           /* stato */
-  .section-table td:nth-child(4) { order: 3; }           /* tipo */
-  .section-table td:nth-child(5) { order: 4; flex: 1; min-width: 0; } /* titolo */
-  .section-table td:nth-child(5) .cell-val { font-weight: 600; white-space: normal; }
+  /* ---- Riga 1: TITOLO — piena larghezza, prominente ---- */
+  .section-table td:nth-child(5) {
+    order: 1;
+    width: 100%;
+    padding-bottom: .4rem;
+    border-bottom: 1.5px solid #F0F2F5;
+    margin-bottom: .05rem;
+  }
+  .section-table td:nth-child(5) .cell-val {
+    font-size: 1rem;
+    font-weight: 700;
+    white-space: normal;
+    line-height: 1.3;
+    color: #1a1a2e;
+  }
   .section-table td:nth-child(5) .cell-notes { display: none; }
 
-  /* Separatore tra riga 1 e riga 2 */
+  /* ---- Riga 2: drag · stato · tipo ---- */
+  .section-table td:nth-child(1) { order: 2; }
+  .section-table td:nth-child(2) { display: none; }
+  .section-table td:nth-child(3) { order: 3; }
+  .section-table td:nth-child(4) { order: 4; }
+
+  /* Separatore */
   .section-table tr::after {
     content: '';
     display: block;
@@ -523,25 +525,22 @@ nav { display: flex; gap: .2rem; flex: 1; }
     order: 5;
     height: 1px;
     background: #F3F4F6;
-    margin: .2rem 0 .1rem;
+    margin: .12rem 0 .04rem;
   }
 
-  /* ---- Riga 2: materiali · pp.X–Y · url · elimina ---- */
-  .section-table td:nth-child(6) { order: 6; }           /* materiali */
-  .section-table td:nth-child(7) { order: 9; }           /* url */
-  .section-table td:nth-child(8) { display: none; }      /* n.pag (ridondante con range) */
-  .section-table td:nth-child(9) { order: 7; font-size: .78rem; color: #6B7280; } /* p.inizio */
+  /* ---- Riga 3: materiali · pp.X–Y · url · elimina ---- */
+  .section-table td:nth-child(6) { order: 6; }
+  .section-table td:nth-child(7) { order: 9; }
+  .section-table td:nth-child(8) { display: none; }
+  .section-table td:nth-child(9) { order: 7; font-size: .78rem; color: #6B7280; }
   .section-table td:nth-child(9)::before { content: 'pp.'; font-size: .65rem; color: #9CA3AF; margin-right: .2rem; }
-  .section-table td:nth-child(10) { order: 8; font-size: .78rem; color: #6B7280; } /* p.fine */
+  .section-table td:nth-child(10) { order: 8; font-size: .78rem; color: #6B7280; }
   .section-table td:nth-child(10)::before { content: '–'; color: #9CA3AF; margin: 0 .15rem; }
-  .section-table td:nth-child(11) { order: 10; margin-left: auto; } /* elimina */
-
-  /* Selects più compatti nella card */
-  .section-table .status-sel,
-  .section-table .type-sel { max-width: 96px; font-size: .72rem; padding: .18rem .4rem; }
-
-  /* Bottone elimina — target grande e visibile */
   .section-table td:nth-child(11) { order: 10; margin-left: auto; }
+
+  .section-table .status-sel,
+  .section-table .type-sel { max-width: 100px; font-size: .73rem; padding: .2rem .42rem; }
+
   .section-table td:nth-child(11) .btn-icon {
     background: #FEE2E2;
     color: #DC2626;
@@ -560,7 +559,6 @@ nav { display: flex; gap: .2rem; flex: 1; }
   .spread-row { grid-template-columns: repeat(2, 1fr); gap: .5rem; }
   .timone-wrapper { padding: .75rem .6rem; }
   .cover-single { width: 75px; }
-  .page-num { font-size: .55rem; }
   .page-type-lbl { font-size: .55rem; }
   .page-title-lbl { font-size: .62rem; -webkit-line-clamp: 3; }
 

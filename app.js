@@ -280,10 +280,10 @@ function renderLista(container) {
       <thead><tr>
         <th style="width:28px"></th>
         <th style="width:26px">#</th>
-        <th>Stato</th>
-        <th>Tipo</th>
+        <th style="min-width:115px">Stato</th>
+        <th style="min-width:105px">Tipo</th>
         <th>Titolo</th>
-        <th>Materiali</th>
+        <th style="min-width:100px">Materiali</th>
         <th style="width:38px">URL</th>
         <th style="width:52px">N.Pag</th>
         <th style="width:62px">P.Inizio</th>
