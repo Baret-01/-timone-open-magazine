@@ -728,20 +728,17 @@ function openReorderModal() {
 }
 
 async function addEmptyToReorder() {
-  // Salva l'ordine drag corrente prima di inserire
-  const ids = [...document.querySelectorAll('#reorder-list .reorder-item[data-id]')].map(el => el.dataset.id);
-  await Promise.all(ids.map((id, i) => db.from('sections').update({ position: i }).eq('id', id)));
-
-  const newPos = ids.length;
-  const defaultType   = state.contentTypes[0]?.name   || '';
-  const defaultStatus = state.statuses[0]?.name        || '';
+  const maxPos = state.sections.length
+    ? Math.max(...state.sections.map(s => s.position)) + 1
+    : 0;
+  const defaultType   = state.contentTypes[0]?.name    || '';
+  const defaultStatus = state.statuses[0]?.name         || '';
   const defaultMat    = state.materialiStatuses[0]?.name || 'Mancanti';
   await db.from('sections').insert({
     title: 'Nuova sezione', content_type: defaultType,
     pages_count: 2, status: defaultStatus, materiali: defaultMat,
-    url: null, notes: null, color: getTypeColor(defaultType), position: newPos,
+    url: null, notes: null, color: getTypeColor(defaultType), position: maxPos,
   });
-
   await loadAll();
   openReorderModal();
 }
