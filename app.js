@@ -549,19 +549,74 @@ function renderDashboard(container) {
 }
 
 // ============================================================
-//  TIMONE VISIVO — sezioni come blocchi drag-and-drop
-//  Ogni sezione è un blocco indipendente: nessuna pagina di
-//  sezioni diverse condivide lo stesso spread.
-//  Sezioni con numero dispari di pagine mostrano
-//  la mezza pagina destra vuota (tratteggiata).
+//  TIMONE VISIVO
+//  - Colori sempre derivati dal tipo (non dal campo color salvato)
+//  - Cover p.1 a sinistra, IV copertina a destra nella stessa riga
 // ============================================================
 
 function renderTimone(container) {
-  const wp = calcPages(state.sections);
+  const wp  = calcPages(state.sections);
+  const tot = totalPages(state.sections);
+  const displayTotal = nextMultiple(Math.max(tot, 4), 4);
 
-  if (!wp.length) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🗺</div><p>Nessuna sezione. Vai nella Lista e aggiungine una.</p></div>`;
-    return;
+  // page → section map
+  const pageMap = {};
+  wp.forEach(s => { for (let p = s.start_page; p <= s.end_page; p++) pageMap[p] = s; });
+
+  const firstSec = wp[0];
+  const lastSec  = wp[wp.length - 1];
+  const hasIV    = lastSec && lastSec.content_type?.toUpperCase() === 'COVER' && lastSec.id !== firstSec?.id;
+  const ivPage   = hasIV ? lastSec.end_page : -1;
+
+  // Cover cell (p.1)
+  const cc  = getTypeColor(firstSec?.content_type || 'COVER');
+  const cTC = isLight(cc) ? '#1a1a2e' : '#fff';
+  const coverCell = `<div class="cover-single">
+    <div class="cover-page" style="background:${cc};color:${cTC}">
+      <div class="page-type-lbl">${escHtml(firstSec?.content_type||'COVER')}</div>
+      <div class="page-title-lbl">${escHtml(firstSec?.title||'COVER')}</div>
+    </div>
+    <div class="page-num-below" style="text-align:center">1</div>
+  </div>`;
+
+  // IV copertina cell
+  let ivCell = '';
+  if (hasIV) {
+    const ic = getTypeColor(lastSec.content_type);
+    const it = isLight(ic) ? '#1a1a2e' : '#fff';
+    ivCell = `<div class="cover-single">
+      <div class="cover-page" style="background:${ic};color:${it}">
+        <div class="page-type-lbl">${escHtml(lastSec.content_type)}</div>
+        <div class="page-title-lbl">${escHtml(lastSec.title)}</div>
+      </div>
+      <div class="page-num-below" style="text-align:center">${lastSec.end_page}</div>
+    </div>`;
+  }
+
+  // Spreads (pages 2..displayTotal, skip IV page)
+  const spreads = [];
+  for (let p = 2; p <= displayTotal; p += 2) {
+    const lp = p, rp = p + 1;
+    spreads.push(buildSpread(
+      lp === ivPage ? null : pageMap[lp], lp,
+      rp === ivPage ? null : pageMap[rp], rp
+    ));
+  }
+
+  // Grid: cover row (IV on right), then rows of 4
+  let gridHtml = `
+    <div class="timone-cover-row">
+      ${coverCell}
+      ${ivCell}
+    </div>`;
+
+  for (let i = 0; i < spreads.length; i += 4) {
+    const chunk = spreads.slice(i, i + 4);
+    const fp = 2 + i * 2, lp2 = fp + chunk.length * 2 - 1;
+    gridHtml += `<div class="spread-row">
+      <div class="timone-row-label">pp. ${fp}–${lp2}</div>
+      ${chunk.join('')}
+    </div>`;
   }
 
   const usedTypes   = [...new Set(wp.map(s => s.content_type))];
@@ -570,79 +625,39 @@ function renderTimone(container) {
     return `<div class="legend-item"><div class="legend-color" style="background:${c}"></div>${escHtml(name)}</div>`;
   }).join('');
 
-  const blocksHtml = wp.map(s => buildSectionBlock(s)).join('');
-
   container.innerHTML = `
     <div class="timone-header">
       <h2>Timone — ${escHtml(MAGAZINE_NAME)}</h2>
       <button class="btn-ghost" onclick="window.print()">🖨 Stampa / PDF</button>
     </div>
     <div class="timone-wrapper">
-      <div class="timone-sections" id="timone-sections-grid">${blocksHtml}</div>
+      <div class="timone-grid">${gridHtml}</div>
       ${legendItems ? `<div class="timone-legend"><span class="legend-label">Legenda:</span>${legendItems}</div>` : ''}
     </div>`;
-
-  initTimoneSortable();
 }
 
-function buildSectionBlock(s) {
-  const tc       = getTypeColor(s.content_type);
-  const tl       = isLight(tc) ? '#1a1a2e' : '#fff';
-  const nPages   = s.pages_count;
-  const nSpreads = Math.ceil(nPages / 2);
-  const spanCols = Math.min(nSpreads, 4);
-  const isOdd    = nPages % 2 !== 0;
+function buildSpread(leftSec, lp, rightSec, rp) {
+  const lc = leftSec  ? getTypeColor(leftSec.content_type)  : '#F3F4F6';
+  const rc = rightSec ? getTypeColor(rightSec.content_type) : '#F3F4F6';
+  const lt = isLight(lc) ? '#1a1a2e' : '#fff';
+  const rt = isLight(rc) ? '#1a1a2e' : '#fff';
+  const isEmpty = !leftSec && !rightSec;
 
-  let spreadsHtml = '';
-  for (let i = 0; i < nSpreads; i++) {
-    const lp         = s.start_page + i * 2;
-    const rp         = s.start_page + i * 2 + 1;
-    const isLastOdd  = isOdd && i === nSpreads - 1;
-    const rc         = isLastOdd ? '#EAECEF' : tc;
-    const rt         = isLastOdd ? '#9CA3AF' : tl;
-
-    spreadsHtml += `<div class="section-sub-spread">
-      <div class="spread-pages">
-        <div class="page-half" style="background:${tc};color:${tl}">
-          ${i === 0 ? `<div class="page-type-lbl">${escHtml(s.content_type)}</div><div class="page-title-lbl">${escHtml(s.title)}</div>` : ''}
-        </div>
-        <div class="fold-line"></div>
-        <div class="page-half${isLastOdd ? ' page-half-empty' : ''}" style="background:${rc};color:${rt}"></div>
+  return `<div class="spread${isEmpty?' empty-spread':''}">
+    <div class="spread-pages">
+      <div class="page-half" style="background:${lc};color:${lt}">
+        ${leftSec  ? `<div class="page-type-lbl">${escHtml(leftSec.content_type)}</div><div class="page-title-lbl">${escHtml(leftSec.title)}</div>` : ''}
       </div>
-      <div class="spread-nums">
-        <span class="page-num-below">${lp}</span>
-        <span class="page-num-below${isLastOdd ? ' page-num-empty' : ''}">${rp}</span>
+      <div class="fold-line"></div>
+      <div class="page-half" style="background:${rc};color:${rt}">
+        ${rightSec ? `<div class="page-type-lbl">${escHtml(rightSec.content_type)}</div><div class="page-title-lbl">${escHtml(rightSec.title)}</div>` : ''}
       </div>
-    </div>`;
-  }
-
-  const pageRange = nPages === 1 ? `p. ${s.start_page}` : `pp. ${s.start_page}–${s.end_page}`;
-
-  return `<div class="section-block" data-id="${s.id}" data-spreads="${nSpreads}" style="grid-column: span ${spanCols}">
-    <div class="section-block-header" style="background:${tc};color:${tl}">
-      <span class="drag-handle timone-drag-handle" title="Trascina per riordinare">⠿</span>
-      <span class="section-block-type">${escHtml(s.content_type)}</span>
-      <span class="section-block-title">${escHtml(s.title)}</span>
-      <span class="section-block-pages">${pageRange}</span>
     </div>
-    <div class="section-block-spreads">${spreadsHtml}</div>
+    <div class="spread-nums">
+      <span class="page-num-below">${lp}</span>
+      <span class="page-num-below">${rp}</span>
+    </div>
   </div>`;
-}
-
-function initTimoneSortable() {
-  const grid = document.getElementById('timone-sections-grid');
-  if (!grid) return;
-  Sortable.create(grid, {
-    handle: '.timone-drag-handle',
-    animation: 150,
-    ghostClass: 'sortable-ghost',
-    onEnd: async () => {
-      const ids = [...grid.querySelectorAll('.section-block[data-id]')].map(el => el.dataset.id);
-      await Promise.all(ids.map((id, i) => db.from('sections').update({ position: i }).eq('id', id)));
-      state.sections = ids.map(id => state.sections.find(s => s.id === id));
-      renderCurrentView();
-    }
-  });
 }
 
 // ============================================================
