@@ -210,6 +210,18 @@ nav { display: flex; gap: 0; flex: 1; }
   vertical-align: middle;
 }
 
+.add-row-ghost {
+  padding: .6rem 1rem;
+  color: #B0B8C8;
+  font-size: .84rem;
+  cursor: pointer;
+  border-top: 1px dashed #E5E7EB;
+  transition: background .15s, color .15s;
+  text-align: left;
+}
+.add-row-ghost:hover { background: #F5F7FF; color: #4F46E5; }
+.add-row-plus { font-size: 1rem; font-weight: 300; margin-right: .3rem; }
+
 .empty-state { text-align: center; padding: 3rem 1rem; color: #9CA3AF; }
 .empty-state .empty-icon { font-size: 3rem; margin-bottom: .75rem; }
 .empty-state p { margin-bottom: 1rem; }
