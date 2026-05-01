@@ -431,8 +431,24 @@ async function saveNewSection() {
 }
 
 function confirmDelete(id, title) {
-  if (!confirm(`Eliminare "${title}"?`)) return;
-  db.from('sections').delete().eq('id', id).then(() => loadAll().then(renderCurrentView));
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-title">
+      <span>🗑 Elimina sezione</span>
+      <button class="btn-icon" onclick="closeModal()">✕</button>
+    </div>
+    <p style="margin:.25rem 0 1.5rem">Eliminare "<strong>${escHtml(title)}</strong>"?</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Annulla</button>
+      <button class="btn-danger" onclick="doDelete('${id}')">Elimina</button>
+    </div>`;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+
+async function doDelete(id) {
+  closeModal();
+  await db.from('sections').delete().eq('id', id);
+  await loadAll();
+  renderCurrentView();
 }
 
 function closeModal() {
