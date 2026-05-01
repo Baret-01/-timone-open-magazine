@@ -16,24 +16,31 @@ let state = {
 };
 
 const DEFAULT_TYPES = [
-  { name: 'COVER',        color: '#1a1a2e' },
-  { name: 'ADV',          color: '#F97316' },
-  { name: 'REDAZIONALE',  color: '#3B82F6' },
-  { name: 'CORPORATE',    color: '#8B5CF6' },
-  { name: 'ATTUALITA',    color: '#EF4444' },
-  { name: 'RETAIL',       color: '#10B981' },
-  { name: 'LIFESTYLE',    color: '#EC4899' },
-  { name: 'CATALOGO',     color: '#64748B' },
+  { name: 'COVER',                  color: '#4A5568' },
+  { name: 'ADV',                    color: '#E91E8C' },
+  { name: 'REDAZIONALE',            color: '#5B9BD5' },
+  { name: 'CORPORATE',              color: '#1E3A8A' },
+  { name: 'ATTUALITA',              color: '#E07830' },
+  { name: 'RETAIL',                 color: '#C8A820' },
+  { name: 'LIFESTYLE',              color: '#AA3050' },
+  { name: 'CATALOGO',               color: '#8090A0' },
+  { name: 'AGRITECH',               color: '#3A9A58' },
+  { name: 'PUBBLIREDAZIONALI',      color: '#FF69B4' },
+  { name: 'CATALOGO COMBUSTIBILE',  color: '#E53935' },
+  { name: 'CATALOGO SFP',           color: '#00BCD4' },
+  { name: 'OPEN INSIEME',           color: '#009688' },
+  { name: 'MONDO IQOS',             color: '#40E0D0' },
+  { name: 'TEMPO LIBERO',           color: '#E53935' },
 ];
 const DEFAULT_STATUSES = [
-  { name: 'Da fare',        color: '#94A3B8' },
-  { name: 'Da richiedere',  color: '#C084FC' },
-  { name: 'Richiesto',      color: '#60A5FA' },
-  { name: 'Attendiamo',     color: '#FB923C' },
-  { name: 'In lavorazione', color: '#FBBF24' },
-  { name: 'Impaginato',     color: '#34D399' },
-  { name: 'Approvato',      color: '#10B981' },
-  { name: 'Consegnato',     color: '#047857' },
+  { name: 'Da fare',        color: '#E2E8F0' },
+  { name: 'Da richiedere',  color: '#DDD6FE' },
+  { name: 'Richiesto',      color: '#BFDBFE' },
+  { name: 'Attendiamo',     color: '#FED7AA' },
+  { name: 'In lavorazione', color: '#FEF08A' },
+  { name: 'Impaginato',     color: '#BBF7D0' },
+  { name: 'Approvato',      color: '#6EE7B7' },
+  { name: 'Consegnato',     color: '#34D399' },
 ];
 const COLOR_PALETTE = [
   // Neutri
@@ -51,10 +58,10 @@ const COLOR_PALETTE = [
 ];
 
 const DEFAULT_MATERIALI = [
-  { name: 'Mancanti',  color: '#EF4444' },
-  { name: 'In arrivo', color: '#F59E0B' },
-  { name: 'Ricevuti',  color: '#3B82F6' },
-  { name: 'OK',        color: '#10B981' },
+  { name: 'Mancanti',  color: '#FCA5A5' },
+  { name: 'In arrivo', color: '#FDB574' },
+  { name: 'Ricevuti',  color: '#93C5FD' },
+  { name: 'Ok',        color: '#6EE7B7' },
 ];
 
 // ============================================================
