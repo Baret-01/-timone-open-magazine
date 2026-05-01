@@ -430,8 +430,19 @@ nav { display: flex; gap: .2rem; flex: 1; }
 @media (max-width: 860px) {
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
   .settings-grid, .settings-grid-3 { grid-template-columns: 1fr; }
-  .spread-row { grid-template-columns: repeat(2, 1fr); }
   .dashboard-grid { grid-template-columns: 1fr; }
+}
+
+/* Portrait: 2 spread per riga nel timone */
+@media (max-width: 860px) and (orientation: portrait) {
+  .spread-row { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* Landscape smartphone: timone a 4 spread senza overflow */
+@media (max-width: 932px) and (orientation: landscape) {
+  .timone-grid { min-width: 0 !important; width: 100%; }
+  .spread-row { grid-template-columns: repeat(4, 1fr) !important; gap: .5rem; }
+  .timone-wrapper { overflow-x: hidden; }
 }
 
 /* ===== RESPONSIVE — smartphone header (portrait + landscape) ===== */
@@ -494,13 +505,11 @@ nav { display: flex; gap: .2rem; flex: 1; }
     font-size: .82rem;
   }
 
-  /* ---- Riga 1: TITOLO — piena larghezza, prominente ---- */
+  /* ---- Riga 1: TITOLO — piena larghezza ---- */
   .section-table td:nth-child(5) {
     order: 1;
     width: 100%;
-    padding-bottom: .4rem;
-    border-bottom: 1.5px solid #F0F2F5;
-    margin-bottom: .05rem;
+    padding-bottom: .35rem;
   }
   .section-table td:nth-child(5) .cell-val {
     font-size: 1rem;
@@ -511,35 +520,47 @@ nav { display: flex; gap: .2rem; flex: 1; }
   }
   .section-table td:nth-child(5) .cell-notes { display: none; }
 
-  /* ---- Riga 2: drag · stato · tipo ---- */
-  .section-table td:nth-child(1) { order: 2; }
-  .section-table td:nth-child(2) { display: none; }
-  .section-table td:nth-child(3) { order: 3; }
-  .section-table td:nth-child(4) { order: 4; }
+  /* ---- Riga 2: TIPO (sx) · MATERIALI (dx) ---- */
+  .section-table td:nth-child(4) { order: 2; }                        /* tipo */
+  .section-table td:nth-child(6) { order: 3; margin-left: auto; }     /* materiali a destra */
 
-  /* Separatore */
+  /* Interruzione di riga tra tipo+materiali e pagine */
+  .section-table tr::before {
+    content: '';
+    display: block;
+    width: 100%;
+    order: 4;
+    height: 0;
+  }
+
+  /* ---- Riga 3: PAGINE ---- */
+  .section-table td:nth-child(9) { order: 5; font-size: .82rem; font-weight: 600; color: #374151; }
+  .section-table td:nth-child(9)::before { content: 'pp. '; font-size: .72rem; color: #9CA3AF; }
+  .section-table td:nth-child(10) { order: 5; font-size: .82rem; font-weight: 600; color: #374151; }
+  .section-table td:nth-child(10)::before { content: '–'; color: #9CA3AF; margin: 0 .2rem; }
+
+  /* Separatore visivo */
   .section-table tr::after {
     content: '';
     display: block;
     width: 100%;
-    order: 5;
+    order: 6;
     height: 1px;
     background: #F3F4F6;
-    margin: .12rem 0 .04rem;
+    margin: .25rem 0 .1rem;
   }
 
-  /* ---- Riga 3: materiali · pp.X–Y · url · elimina ---- */
-  .section-table td:nth-child(6) { order: 6; }
-  .section-table td:nth-child(7) { order: 9; }
-  .section-table td:nth-child(8) { display: none; }
-  .section-table td:nth-child(9) { order: 7; font-size: .78rem; color: #6B7280; }
-  .section-table td:nth-child(9)::before { content: 'pp.'; font-size: .65rem; color: #9CA3AF; margin-right: .2rem; }
-  .section-table td:nth-child(10) { order: 8; font-size: .78rem; color: #6B7280; }
-  .section-table td:nth-child(10)::before { content: '–'; color: #9CA3AF; margin: 0 .15rem; }
-  .section-table td:nth-child(11) { order: 10; margin-left: auto; }
+  /* ---- Riga 4: STATO · drag · elimina ---- */
+  .section-table td:nth-child(3) { order: 7; }                        /* stato */
+  .section-table td:nth-child(1) { order: 8; }                        /* drag */
+  .section-table td:nth-child(2) { display: none; }                   /* # nascosto */
+  .section-table td:nth-child(7) { order: 9; }                        /* url */
+  .section-table td:nth-child(8) { display: none; }                   /* n.pag */
+  .section-table td:nth-child(11) { order: 10; margin-left: auto; }   /* elimina */
 
   .section-table .status-sel,
-  .section-table .type-sel { max-width: 100px; font-size: .73rem; padding: .2rem .42rem; }
+  .section-table .type-sel,
+  .section-table .mat-sel { max-width: 110px; font-size: .74rem; padding: .22rem .44rem; }
 
   .section-table td:nth-child(11) .btn-icon {
     background: #FEE2E2;
